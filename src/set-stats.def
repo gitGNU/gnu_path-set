@@ -1,0 +1,204 @@
+// Copyright (C) 2016  Stefan Vargyas
+// 
+// This file is part of Path-Set.
+// 
+// Path-Set is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// Path-Set is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with Path-Set.  If not, see <http://www.gnu.org/licenses/>.
+
+// CASE(type, id, name, help)
+
+CASE(size,
+ dups_line,
+"dups-line",
+"the number of duplicate input lines"
+)
+CASE(size,
+ uniq_line,
+"uniq-line",
+"the number of unique input lines"
+)
+CASE(size,
+ line_mem,
+"line-mem",
+"the total amount of bytes of input text,\n"
+"not including newline chars"
+)
+CASE(size,
+ dups_elem,
+"dups-elem",
+"the number of duplicate insert operations\n"
+"in the path element set structure"
+)
+CASE(size,
+ uniq_elem,
+"uniq-elem",
+"the number of unique insert operations\n"
+"in the path element set structure"
+)
+CASE(size,
+ dups_node,
+"dups-node",
+"the number of duplicate insert operations\n"
+"in the main set structure"
+)
+CASE(size,
+ uniq_node,
+"uniq-node",
+"the number of unique insert operations\n"
+"in the main set structure"
+)
+CASE(size,
+ elem_insert_eq,
+"elem-insert-eq",
+"the number of '==' comparisons inserting in\n"
+"the path element set structure"
+)
+CASE(size,
+ elem_insert_lt,
+"elem-insert-lt",
+"the number of '<' comparisons inserting in\n"
+"the path element set structure"
+)
+CASE(size,
+ elem_insert_gt,
+"elem-insert-gt",
+"the number of '>' comparisons inserting in\n"
+"the path element set structure"
+)
+CASE(size,
+ elem_insert_ne,
+"elem-insert-ne",
+"the number of '!=' comparisons inserting in\n"
+"the path element set structure"
+)
+CASE(size,
+ elem_rehash_eq,
+"elem-rehash-eq",
+"the number of '==' comparisons rehashing in\n"
+"the path element hash set structure"
+)
+CASE(size,
+ elem_rehash_ne,
+"elem-rehash-ne",
+"the number of '!=' comparisons rehashing in\n"
+"the path element hash set structure"
+)
+CASE(size,
+ node_insert_eq,
+"node-insert-eq",
+"the number of '==' comparisons inserting in\n"
+"the main set structure"
+)
+CASE(size,
+ node_insert_lt,
+"node-insert-lt",
+"the number of '<' comparisons inserting in\n"
+"the main set structure"
+)
+CASE(size,
+ node_insert_gt,
+"node-insert-gt",
+"the number of '>' comparisons inserting in\n"
+"the main set structure"
+)
+CASE(size,
+ node_insert_ne,
+"node-insert-ne",
+"the number of '!=' comparisons inserting in\n"
+"the main set structure"
+)
+CASE(size,
+ node_rehash_eq,
+"node-rehash-eq",
+"the number of '==' comparisons rehashing in\n"
+"the main hash set structure"
+)
+CASE(size,
+ node_rehash_ne,
+"node-rehash-ne",
+"the number of '!=' comparisons rehashing in\n"
+"the main hash set structure"
+)
+CASE(size,
+ hash_size,
+"hash-size",
+"the table size of the hash set structure"
+)
+CASE(size,
+ hash_used,
+"hash-used",
+"the number of used entries in hash table of\n"
+"the hash set structure"
+)
+CASE(frac,
+ hash_load,
+"hash-load",
+"the table load factor of the hash set structure"
+)
+CASE(size,
+ elem_struct_size,
+"elem-struct-size",
+"the size of node structures of the path element\n"
+"set structure"
+)
+CASE(size,
+ node_struct_size,
+"node-struct-size",
+"the size of node structures of the main set\n"
+"structure"
+)
+CASE(size,
+ elem_struct,
+"elem-struct",
+"the number of node structures allocated by\n"
+"the path element set structure"
+)
+CASE(size,
+ node_struct,
+"node-struct",
+"the number of node structures allocated by\n"
+"the main set structure"
+)
+CASE(size,
+ elem_mem,
+"elem-mem",
+"the amount of bytes of memory consumed by\n"
+"the nodes in the path element set structure"
+)
+CASE(size,
+ node_mem,
+"node-mem",
+"the amount of bytes of memory consumed by\n"
+"the nodes in the main set structure"
+)
+CASE(size,
+ total_node_mem,
+"total-node-mem",
+"the total amount of bytes of memory consumed\n"
+"by the nodes in the main structure and in\n"
+"the path element structure if any"
+)
+CASE(clocks,
+ insert_time,
+"insert-time",
+"the total %s time in microseconds spent\n"
+"inserting in the main structure"
+)
+CASE(clocks,
+ lookup_time,
+"lookup-time",
+"the total %s time in microseconds spent\n"
+"looking-up into the main structure"
+)
+
+

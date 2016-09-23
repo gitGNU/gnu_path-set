@@ -1,0 +1,94 @@
+#
+# # meta command:
+# $ path-set-test \
+# --config-path-trie-node-32bit-offsets \
+# --config-path-trie-elem-32bit-offsets \
+# --config-debug \
+# --input=tests/files2.txt \
+# --expr='10 ** x' \
+# --limits=1-6 \
+# --pool-size=512M \
+# --hash-size=2M \
+# --node-size=4M \
+# --separators='/.-' \
+# --repeat=10 \
+# --sleep=100 \
+# --run-series
+#
+
+$ date
+Sun Aug 28 19:57:59 EEST 2016
+$
+
+$ make -B CONFIG+=PATH_TRIE_NODE_32BIT_OFFSETS CONFIG+=PATH_TRIE_ELEM_32BIT_OFFSETS 32BIT=no DEBUG=yes
+gcc -Wall -Wextra -std=gnu99 -I. -Ijson -Ignulib -DPROGRAM=path-set -DCONFIG_PATH_TRIE_NODE_32BIT_OFFSETS -DCONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS -DDEBUG -g main.c common.c clocks.c set-intf.c trie-path-set.c lhash-path-set.c ghash-path-set.c trie-plain-set.c lhash-plain-set.c ghash-plain-set.c json/pool-alloc.c gnulib/hash.c -o path-set -lm
+$
+
+$ ./path-set -C
+CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS: yes
+CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS: yes
+CONFIG_PATH_TRIE_UINT_HASH_IDENTOP:  no
+CONFIG_TRIE_PATH_SET_PRINT_SET:      no
+CONFIG_VALUE_TYPE_SIZE:              64
+32BIT:                               no
+DEBUG:                               yes
+OPT:                                 -
+$
+
+$ PATH_SET_TEST_INPUT=tests/files2.txt
+$ PATH_SET_TEST_EXPR='10 ** x'
+$ PATH_SET_TEST_LIMITS=1-6
+$ PATH_SET_TEST_POOL_SIZE=512M
+$ PATH_SET_TEST_HASH_SIZE=2M
+$ PATH_SET_TEST_NODE_SIZE=4M
+$ PATH_SET_TEST_SEPARATORS='/.-'
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --ternary-tree
+7378c6716cfe0fd21f8b03d12c8e3e72d10fcd9a
+
+real	0m29.610s
+user	0m24.482s
+sys	0m6.088s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --linear-hash
+75bb14d28f1299a8642bd91d0d9ee6bdd7f60294
+
+real	0m18.467s
+user	0m12.941s
+sys	0m6.064s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --gnulib-hash
+818cee16901ec6f75703edc28fd5085e27077ee3
+
+real	0m19.798s
+user	0m13.621s
+sys	0m6.552s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --ternary-tree
+a3e40c76c7706bab6c18fd379c08d31db1fa377d
+
+real	0m50.565s
+user	0m45.655s
+sys	0m7.484s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --linear-hash
+e9609bff51deefb791369063df34a45e6a4b68a9
+
+real	0m37.770s
+user	0m32.190s
+sys	0m6.784s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --gnulib-hash
+820152cfe11e6fe1081db7d62f3e9c12be4cb287
+
+real	0m41.082s
+user	0m35.862s
+sys	0m7.252s
+$
+

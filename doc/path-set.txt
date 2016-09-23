@@ -1,0 +1,746 @@
+Copyright (C) 2016  Stefan Vargyas
+
+This file is part of Path-Set.
+
+Path-Set is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Path-Set is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Path-Set.  If not, see <http://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------------
+
+
+                                    Path-Set
+                                    ========
+                        Ştefan Vargyas, stvar@yahoo.com
+
+                                  Sep  9, 2016
+
+
+Table of Contents
+-----------------
+
+1. Result Data Testing 'path-set'
+2. The Complete Testing Scenario
+3. Comparing Linear and Gnulib Hash Path Tries
+4. Appendix: Node 'struct' Definitions
+5. References
+
+
+1. Result Data Testing 'path-set'
+=================================
+
+This document presents a complete testing scenario of a number of relevant
+'path-set' configurations. It starts by showing first the aggregated results
+obtained, for to unroll the complete scenario of 'bash' command lines issued
+in a dedicated section. Before reading further on, one should be acquainted
+with the content of the README file first.
+
+The tests ran on a GNU/Linux 64-bit Intel x86 CPU machine, on two sets of
+file path names obtained from running 'find' on two private file systems.
+Given the private nature of this data, I will not make this two text files
+public. However, given that Path-Set is software libre in its entirety, one
+can easily replicate the scenario described below on one's own input data.
+
+The two sets of file path names will be referred from now on by the following
+two names: 'tests/files.txt' and 'tests/files2.txt'. The number of path names
+contained in and, respectively, the size of these text files are as shown:
+
+  $ test-files-wc() { find tests -maxdepth 1 -name files\*.txt|xargs -n1 wc -cl|sed -r 's/^\s+//'; }
+
+  $ test-files-wc 
+  405909 27072347 tests/files.txt
+  830206 48880063 tests/files2.txt
+
+  $ numfmt() { env numfmt --to=iec --round=nearest --format=%1f "$@"; }
+
+  $ test-files-wc|numfmt --field=1|numfmt --field=2
+  396K 26M tests/files.txt
+  811K 47M tests/files2.txt
+
+The resulting data obtained from running several instances of 'path-set-test'
+command lines looks as exhibited by the tables below. Firstly, three tables
+obtained from file 'tests/files.txt':
+
+  ------------------------------------------------------------------------
+     32-bit pointers, plain pointers ('path-set-test-grep' command #1)
+  --------------+---------+---------------+---------------+---------------
+    path elem   |  input  |   plain-set   |   path-trie   |   (3) gains
+    separators  |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  --------------+---------+---------------+---------------+-------+-------
+    '/.-'       |         |               |     20.4M     |  21%  |  29%
+  --------------+  25.8M  |     28.9M     +---------------+-------+-------
+    '/'         |         |               |     16.8M     |  35%  |  42%
+  --------------+---------+---------------+---------------+-------+-------
+
+  ------------------------------------------------------------------------
+     64-bit pointers, plain pointers ('path-set-test-grep' command #2)
+  --------------+---------+---------------+---------------+---------------
+    path elem   |  input  |   plain-set   |   plain-set   |   (3) gains
+    separators  |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  --------------+---------+---------------+---------------+-------+-------
+    '/.-', '/'  |  25.8M  |     32.0M     |     28.9M     | -12%  |  10%
+  --------------+---------|---------------+---------------+-------+-------
+
+  ------------------------------------------------------------------------
+     64-bit pointers, 32-bit offsets ('path-set-test-grep' command #3)
+  --------------+---------+---------------+---------------+---------------
+    path elem   |  input  |   plain-set   |   path-trie   |   (3) gains
+    separators  |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  --------------+---------+---------------+---------------+-------+-------
+    '/.-'       |         |               |     25.1M     |   3%  |  22%
+  --------------+  25.8M  |     32.0M     +---------------+-------+-------
+    '/'         |         |               |     19.9M     |  23%  |  38%
+  --------------+---------|---------------+---------------+-------+-------
+
+For file 'tests/files2.txt', the resulting test data looks as follows:
+
+  ------------------------------------------------------------------------
+     32-bit pointers, plain pointers ('path-set-test-grep' command #4)
+  --------------+---------+---------------+---------------+---------------
+    path elem   |  input  |   plain-set   |   path-trie   |   (3) gains
+    separators  |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  --------------+---------+---------------+---------------+-------+-------
+    '/.-'       |         |               |     43.1M     |   7%  |  19%
+  --------------+  46.6M  |     52.9M     +---------------+-------+-------
+    '/'         |         |               |     33.9M     |  27%  |  36%
+  --------------+---------+---------------+---------------+-------+-------
+
+  ------------------------------------------------------------------------
+     64-bit pointers, plain pointers ('path-set-test-grep' command #5)
+  --------------+---------+---------------+---------------+---------------
+    path elem   |  input  |   plain-set   |   plain-set   |   (3) gains
+    separators  |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  --------------+---------+---------------+---------------+-------+-------
+    '/.-', '/'  |  46.6M  |     59.3M     |     52.9M     | -14%  |  11%
+  --------------+---------+---------------+---------------+-------+-------
+
+  ------------------------------------------------------------------------
+     64-bit pointers, 32-bit offsets ('path-set-test-grep' command #6)
+  --------------+---------+---------------+---------------+---------------
+    path elem   |  input  |   plain-set   |   path-trie   |   (3) gains
+    separators  |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  --------------+---------+---------------+---------------+-------+-------
+    '/.-'       |         |               |     52.9M     | -14%  |  11%
+  --------------+  46.6M  |     59.3M     +---------------+-------+-------
+    '/'         |         |               |     40.5M     |  13%  |  32%
+  --------------+---------+---------------+---------------+-------+-------
+
+The values displayed by the six tables above are mere projections of the data
+contained in the corresponding tables produced by the named 'path-set-test-grep'
+command instances to be seen in the next section.
+
+The fourth column of the tables above is selected to be the winner dictionary
+data structure over all the other variants available. Remark that the linear
+hash path trie data structure almost always wins against the other dictionary
+types Path-Set is currently implementing. The exceptions occur in the cases of
+test series using 64-bit plain pointers.
+
+The tables above indicate that taking the path elements separators to simply
+be '/', instead of '/.-' (i.e. the most frequently occurring three punctuation
+characters in the input) is always better.
+
+  $ punct-freq() { [ -f "$1" ] && tr -dc '[[:punct:]]' < "$1"|sed -r 's/./\0\n/g'|sort|uniq -c|sort -k1nr,1; }
+
+  $ punct-freq tests/files.txt|head -3
+  3713430 /
+   668391 .
+   438627 -
+
+  $ punct-freq tests/files2.txt|head -3
+  6007643 /
+  1366150 .
+   800398 -
+
+Looking at the tables corresponding to tests of 64-bit plain pointers (the second
+and the fifth of the tables above) and comparing the data with that in the tables
+corresponding to 64-bit pointers using 32-bit offsets (the third and the sixth
+table), one can readily observe that the latter configuration wins significantly
+over the former.
+
+The negative percents in the 64-bit plain pointers tables (the second and the
+fifth) show that there is no gain in memory consumption relative to the size
+of the input when using plain pointers in node structures on 64-bit platforms.
+
+It would be interesting to run 'path-set-test' on a 64-bit GNU/Linux platform
+supporting the x32-ABI [1]. It is very likely that such platform (with 'gcc'
+sporting the option `-mx32') will render useless all the code enabling 32-bit
+offsets. (Nota bene, none other than Donald Knuth himself made public a rant [2]
+against x86-64 GNU/Linux platforms not offering 32-bit virtual address spaces.)
+
+
+2. The Complete Testing Scenario
+================================
+
+The testing scenario applied to the input files 'tests/files{,2}.txt' is laid
+out to its entire extent by the sequence of command lines following below.
+
+First step: source in the 'bash' script 'src/commands.sh', not forgetting to
+enable the 'bash' option 'extglob'. (The shell functions of 'src/commands.sh'
+need from 'bash' its so-called extended pattern matching functionalities.)
+
+  $ cd src
+
+  $ shopt -s extglob
+
+  $ . commands.sh
+
+Second step: define '$SHA1NAMES' -- an environment variable holding a shell
+globbing pattern matching SHA1-named file names -- and ensure that the current
+directory -- 'src' -- doesn't contain any such files (the 'find' command below
+produces an empty output):
+
+  $ SHA1NAMES=$(printf '%40s\n'|sed 's/ /[0-9a-f]/g')
+
+  $ find -maxdepth 1 -name "$SHA1NAMES"
+
+Third step: proceed running several 'path-set-test' commands, each having an own
+set of `--config-*' command line options specified. Note that each such set of
+configuration parameters is applied to two 'path-set-test' instances: one for
+which `--separators' is not specified (thus `--separators' receiving its default
+value: '/') and one for which `--separators' is set to be '/.-'.
+
+  $ path-set-test -E -i tests/files.txt -o+ -q --config-debug
+  b99ac977f942c00666b248b143bea10db8794915
+
+  $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
+  --config-path-trie-32bit-offsets
+  005d7f3901ae1bbf6d5734cd170b1f4186bae3c8
+
+  $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
+  --config-32bit
+  231dd502bfcd20178eb7f811d35dfac19f711287
+
+  $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
+  --separators='/.-'
+  6f6ede8a09d478e137c4a5071a2227081900a6d3
+
+  $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
+  --config-path-trie-32bit-offsets --separators='/.-'
+  ea395aec70f7c3430563a65c7ab0718d49e77636
+
+  $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
+  --config-32bit --separators='/.-'
+  b41d44ed37d4c365532398deb60deeadcf67c8e9
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
+  --pool-size=512M
+  a93b0e60ea72840bedf0ad7ede79ee9b26dab722
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
+  --config-path-trie-32bit-offsets --pool-size=512M
+  b3fdb1b4e2a5c56c846216bd4831f233c423f037
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
+  --config-32bit --pool-size=512M
+  af3de66e7e2478334600813dc68c59c85b1154b1
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
+  --pool-size=512M --separators='/.-'
+  abd604f96b0af56b335126ec23269afc32a8346a
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
+  --config-path-trie-32bit-offsets --pool-size=512M --separators='/.-'
+  3e56ea13750309a7c2ddbe31870f3de1555ac6aa
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
+  --config-32bit --pool-size=512M --separators='/.-'
+  c571793fe59e33450d695640df30a0a3e35cd82d
+
+The 'path-set-test' command instances above running on 'tests/files2.txt' defined
+`--pool-size' to be '512M'. This was needed for to be able to complete the tests
+on 'ternary-tree' set types: the tables obtained below from 'path-set-test-grep'
+show that for 'ternary-tree's the default pool size value of '128M' would have
+not been sufficient.
+
+Fourth step: move to a subdirectory of 'tests' directory all the 84 SHA1-named
+files produced by the 'path-set-test' commands issued above:
+
+  $ ls -1 $SHA1NAMES|wc -l
+  84
+
+  $ mkdir ../tests/2016-08-28
+
+  $ mv -t ../tests/2016-08-28 $SHA1NAMES
+
+Fifth step: now that one has readily available all the statistics data needed,
+recorded in the SHA1-named files just moved to directory 'tests/2016-08-28', it
+is time to arrange this data into easily readable table formats:
+
+  $ cd ../tests/2016-08-28
+
+  $ size-fmt() { bc -q <(echo 'scale=1; print read() / 1024^2, "M\n"'); }
+
+  $ stat -c %s ../files.txt|size-fmt 
+  25.8M
+
+  $ stat -c %s ../files2.txt|size-fmt 
+  46.6M
+
+  # path-set-test-grep command #1:
+  $ path-set-test-grep -Fe \
+  --input=tests/files.txt --config-32bit \
+  --stat-total-node-mem={25.8M,28.9M}
+  separators  struct-type  set-type      total-node-mem  25.8M  28.9M
+  '/'         path-trie    linear-hash            16.8M    35%    42%
+  '/'         path-trie    gnulib-hash            18.5M    28%    36%
+  '/.-'       path-trie    linear-hash            20.4M    21%    29%
+  '/.-'       path-trie    gnulib-hash            21.6M    16%    25%
+  '/'         plain-set    linear-hash            27.4M    -6%     5%
+  '/.-'       plain-set    linear-hash            27.4M    -6%     5%
+  '/'         plain-set    gnulib-hash            28.9M   -12%     0%
+  '/.-'       plain-set    gnulib-hash            28.9M   -12%     0%
+  '/.-'       path-trie    ternary-tree           31.9M   -24%   -10%
+  '/'         path-trie    ternary-tree           41.2M   -60%   -43%
+  '/'         plain-set    ternary-tree           61.0M  -136%  -111%
+  '/.-'       plain-set    ternary-tree           61.0M  -136%  -111%
+  
+  # path-set-test-grep command #2:
+  $ path-set-test-grep -Fe \
+  --input=tests/files.txt --not --config-32bit --not --config-path-trie-32bit-offsets \
+  --stat-total-node-mem={25.8M,32.0M}
+  separators  struct-type  set-type      total-node-mem  25.8M  32.0M
+  '/'         plain-set    linear-hash            28.9M   -12%    10%
+  '/.-'       plain-set    linear-hash            28.9M   -12%    10%
+  '/'         path-trie    linear-hash            29.5M   -14%     8%
+  '/'         plain-set    gnulib-hash            32.0M   -24%     0%
+  '/.-'       plain-set    gnulib-hash            32.0M   -24%     0%
+  '/'         path-trie    gnulib-hash            33.1M   -28%    -4%
+  '/.-'       path-trie    linear-hash            39.0M   -51%   -22%
+  '/.-'       path-trie    gnulib-hash            41.4M   -60%   -29%
+  '/.-'       path-trie    ternary-tree           63.8M  -147%  -100%
+  '/'         path-trie    ternary-tree           82.4M  -219%  -158%
+  '/'         plain-set    ternary-tree          121.9M  -373%  -281%
+  '/.-'       plain-set    ternary-tree          121.9M  -373%  -281%
+  
+  # path-set-test-grep command #3:
+  $ path-set-test-grep -Fe \
+  --input=tests/files.txt --not --config-32bit --config-path-trie-32bit-offsets \
+  --stat-total-node-mem={25.8M,32.0M}
+  separators  struct-type  set-type      total-node-mem  25.8M  32.0M
+  '/'         path-trie    linear-hash            19.9M    23%    38%
+  '/.-'       path-trie    linear-hash            25.1M     3%    22%
+  '/'         path-trie    gnulib-hash            26.8M    -4%    16%
+  '/'         plain-set    linear-hash            28.9M   -12%    10%
+  '/.-'       plain-set    linear-hash            28.9M   -12%    10%
+  '/'         plain-set    gnulib-hash            32.0M   -24%     0%
+  '/.-'       plain-set    gnulib-hash            32.0M   -24%     0%
+  '/.-'       path-trie    gnulib-hash            32.1M   -24%     0%
+  '/.-'       path-trie    ternary-tree           54.6M  -111%   -71%
+  '/'         path-trie    ternary-tree           76.0M  -195%  -138%
+  '/'         plain-set    ternary-tree          121.9M  -373%  -281%
+  '/.-'       plain-set    ternary-tree          121.9M  -373%  -281%
+  
+  # path-set-test-grep command #4:
+  $ path-set-test-grep -Fe \
+  --input=tests/files2.txt --config-32bit \
+  --stat-total-node-mem={46.6M,52.9M}
+  separators  struct-type  set-type      total-node-mem  46.6M  52.9M
+  '/'         path-trie    linear-hash            33.9M    27%    36%
+  '/'         path-trie    gnulib-hash            36.9M    21%    30%
+  '/.-'       path-trie    linear-hash            43.1M     7%    19%
+  '/.-'       path-trie    gnulib-hash            45.0M     3%    15%
+  '/'         plain-set    linear-hash            49.8M    -7%     6%
+  '/.-'       plain-set    linear-hash            49.8M    -7%     6%
+  '/'         plain-set    gnulib-hash            52.9M   -14%     0%
+  '/.-'       plain-set    gnulib-hash            52.9M   -14%     0%
+  '/.-'       path-trie    ternary-tree           65.3M   -40%   -23%
+  '/'         path-trie    ternary-tree           81.4M   -75%   -54%
+  '/'         plain-set    ternary-tree          136.1M  -192%  -157%
+  '/.-'       plain-set    ternary-tree          136.1M  -192%  -157%
+  
+  # path-set-test-grep command #5:
+  $ path-set-test-grep -Fe \
+  --input=tests/files2.txt --not --config-32bit --not --config-path-trie-32bit-offsets \
+  --stat-total-node-mem={46.6M,59.3M}
+  separators  struct-type  set-type      total-node-mem  46.6M  59.3M
+  '/'         plain-set    linear-hash            52.9M   -14%    11%
+  '/.-'       plain-set    linear-hash            52.9M   -14%    11%
+  '/'         plain-set    gnulib-hash            59.3M   -27%     0%
+  '/.-'       plain-set    gnulib-hash            59.3M   -27%     0%
+  '/'         path-trie    linear-hash            60.2M   -29%    -2%
+  '/'         path-trie    gnulib-hash            66.5M   -43%   -12%
+  '/.-'       path-trie    linear-hash            82.4M   -77%   -39%
+  '/.-'       path-trie    gnulib-hash            86.4M   -85%   -46%
+  '/.-'       path-trie    ternary-tree          130.6M  -180%  -120%
+  '/'         path-trie    ternary-tree          162.9M  -250%  -175%
+  '/'         plain-set    ternary-tree          272.3M  -484%  -359%
+  '/.-'       plain-set    ternary-tree          272.3M  -484%  -359%
+  
+  # path-set-test-grep command #6:
+  $ path-set-test-grep -Fe \
+  --input=tests/files2.txt --not --config-32bit --config-path-trie-32bit-offsets \
+  --stat-total-node-mem={46.6M,59.3M}
+  separators  struct-type  set-type      total-node-mem  46.6M  59.3M
+  '/'         path-trie    linear-hash            40.5M    13%    32%
+  '/.-'       path-trie    linear-hash            52.9M   -14%    11%
+  '/'         plain-set    linear-hash            52.9M   -14%    11%
+  '/.-'       plain-set    linear-hash            52.9M   -14%    11%
+  '/'         path-trie    gnulib-hash            53.4M   -15%    10%
+  '/'         plain-set    gnulib-hash            59.3M   -27%     0%
+  '/.-'       plain-set    gnulib-hash            59.3M   -27%     0%
+  '/.-'       path-trie    gnulib-hash            66.8M   -43%   -13%
+  '/.-'       path-trie    ternary-tree          111.0M  -138%   -87%
+  '/'         path-trie    ternary-tree          149.7M  -221%  -153%
+  '/'         plain-set    ternary-tree          272.3M  -484%  -359%
+  '/.-'       plain-set    ternary-tree          272.3M  -484%  -359%
+  
+The meaning of 'total-node-mem' column of the tables above is described by the
+output of the following commands issued from within the 'src' directory:
+
+  $ ./path-set --help-stats|grep -E ^total-node-mem: -A2
+  total-node-mem:   the total amount of bytes of memory consumed
+                      by the nodes in the main structure and in
+                      the path element structure if any
+
+The C 'struct' definitions for all node types of the 'path-set' configurations
+above are shown in the Appendix section below. The 'struct's that have a member
+'str' -- meaning by case a reference to either a path name or a path element --
+determine the corresponding '{node,elem}-mem' stat parameter to also include the
+amount of memory needed by the respective NUL-terminated string.
+
+  $ ./path-set --help-stats|grep -E '^(elem|node)-mem:' -A1
+  elem-mem:         the amount of bytes of memory consumed by
+                      the nodes in the path element set structure
+  node-mem:         the amount of bytes of memory consumed by
+                      the nodes in the main set structure
+
+Consequently, the stat parameter 'total-node-mem' will also include the total
+amount of memory consumed by all path names or, by case, all path elements of
+a given input.
+
+The two percentage columns seen above next to the 'total-node-mem' columns
+are representing the amount of percents gained by 'total-node-mem' relative
+to the value specified by the column header.
+
+For all tables above, the reference values based on which values get computed
+on the percentage columns were taken as:
+
+  * the size of the input file and, respectively,
+  * the value on the column 'total-node-mem' corresponding to plain gnulib hash
+    tables.
+
+For example, in the case of the last of 'path-set-test-grep' commands above (the
+one labeled by '#6'), '46.6M' is the size of the input file 'tests/files2.txt'
+(see the output obtained from the corresponding 'stat|size-fmt' command above).
+The value '59.3M' is that of 'total-node-mem' in case of the dictionary used by
+'path-set' being of type 'plain-set' 'gnulib-hash'.
+
+
+3. Comparing Linear and Gnulib Hash Path Tries
+==============================================
+
+The statistics data resulting upon the series of tests presented in the previous
+section indicate that the (simplistically implemented!) linear hash path tries
+always win against the path tries based on the elaborated Gnulib's generic hash
+table implementation. From the point of view of the latter data structure, this
+hierarchy between the two is kind of unfair.
+
+This section reveals a handful of details concerning the implementation of these
+kinds of path tries for to make even the inequitable situation between them two.
+For starters, let one see the tables below:
+
+  $ path-set-test-grep -Fe \
+  --path-trie --not --ternary-tree \
+  --input=tests/files.txt --config-32bit \
+  --stat-{{elem,node}-struct{,-size},total-node-mem}
+  separators  set-type     elem-struct-size  node-struct-size  elem-struct  node-struct  total-node-mem
+  '/'         linear-hash              1.00             16.00    255275.00    835146.00           16.8M
+  '/'         gnulib-hash              8.00             16.00    255275.00    835146.00           18.5M
+  '/.-'       linear-hash              1.00             16.00    165810.00   1216413.00           20.4M
+  '/.-'       gnulib-hash              8.00             16.00    165810.00   1216413.00           21.6M
+
+  $ path-set-test-grep -Fe \
+  --path-trie --not --ternary-tree \
+  --input=tests/files2.txt --config-32bit \
+  --stat-{{elem,node}-struct{,-size},total-node-mem}
+  separators  set-type     elem-struct-size  node-struct-size  elem-struct  node-struct  total-node-mem
+  '/'         linear-hash              1.00             16.00    441310.00   1724004.00           33.9M
+  '/'         gnulib-hash              8.00             16.00    441310.00   1724004.00           36.9M
+  '/.-'       linear-hash              1.00             16.00    283195.00   2572952.00           43.1M
+  '/.-'       gnulib-hash              8.00             16.00    283195.00   2572952.00           45.0M
+
+  $ path-set-test-grep -Fe \
+  --path-trie --not --ternary-tree \
+  --input=tests/files.txt --not --config-32bit --config-path-trie-32bit-offsets \
+  --stat-{{elem,node}-struct{,-size},total-node-mem}
+  separators  set-type     elem-struct-size  node-struct-size  elem-struct  node-struct  total-node-mem
+  '/'         linear-hash              1.00             20.00    255275.00    835146.00           19.9M
+  '/.-'       linear-hash              1.00             20.00    165810.00   1216413.00           25.1M
+  '/'         gnulib-hash             16.00             24.00    255275.00    835146.00           26.8M
+  '/.-'       gnulib-hash             16.00             24.00    165810.00   1216413.00           32.1M
+
+  $ path-set-test-grep -Fe \
+  --path-trie --not --ternary-tree \
+  --input=tests/files2.txt --not --config-32bit --config-path-trie-32bit-offsets \
+  --stat-{{elem,node}-struct{,-size},total-node-mem}
+  separators  set-type     elem-struct-size  node-struct-size  elem-struct  node-struct  total-node-mem
+  '/'         linear-hash              1.00             20.00    441310.00   1724004.00           40.5M
+  '/.-'       linear-hash              1.00             20.00    283195.00   2572952.00           52.9M
+  '/'         gnulib-hash             16.00             24.00    441310.00   1724004.00           53.4M
+  '/.-'       gnulib-hash             16.00             24.00    283195.00   2572952.00           66.8M
+
+These four tables show the sizes -- '{elem,node}-struct-size' -- and the counts
+-- '{elem,node}-struct' -- of path element node structures and path trie node
+structures respectively. The sizes and the counts are considered for each of
+the two input test files and for each of the two most important configurations
+of 'path-set' -- those of 32-bit pointers (`--config-32bit') and 64-bit pointers
+using 32-bit offsets (`--not --config-32bit --config-path-trie-32-bit-offsets').
+
+The columns '{elem,node}-struct' in each of the four tables above attest what is
+to be expected: the linear hash path tries and the gnulib hash path tries use the
+same number of path element node structures and path trie node structures.
+
+Looking at the columns '{elem,node}-struct-size', one would conclude that the
+difference resulted between the two dictionary structures with respect to the
+amount of memory consumed by their node structures are due to the disparity
+between the sizes of the node structures used.
+
+The C definitions for the path element node structures corresponding to linear
+and gnulib hash path tries are presented in the Appendix section: the 'struct's
+'lhash_node_t' and 'ghash_node_t' respectively.
+
+The structure 'lhash_node_t' is defined such that to store the length 'len' of
+the path element 'str' it refers to, while choosing for the smallest sufficient
+type for 'len': 'int8_t'. Here the presupposition is that path elements having
+length greater than 255 rarely occur in practice. If the length of 'str' exceeds
+255 then 'len' is set to 0. Note that in the case of this hash table structure,
+'len' is in fact dispensable at the expense of having to compute the length of
+'str' each time calling for 'LHASH_EQ' in 'lhash-impl.h'.
+
+Another peculiarity of 'lhash_node_t' is that it defines 'str' as 'char str[0]'.
+This is to say that the structure is only a header for the variable-length 'str'
+(such non-ISO C constructions are allowed by 'gcc'). Defining 'str' this way and
+having the linear hash table implemented in file 'lhash-impl.h' to support it,
+implies that the many 'lhash_node_t' structures used are saving each an amount
+of memory of the size of one pointer.
+
+On the other hand, 'len' is needed by 'ghash_node_t' for two reasons. The first
+one is that the path element strings the hash table implemented in 'ghash-impl.h'
+receives as input are not NUL-terminated. The second reason connects to the first
+one: from the perspective of the Gnulib's generic hash table implementation used
+internally in 'ghash-impl.h', the objects it contains are opaque. Removing 'len'
+from 'ghash_node_t' -- these structures are the actual objects the Gnulib's hash
+table holds in -- implies that the length parameter pairing each path element
+string has to percolate down the lower level of Gnulib's hash table for to pair
+judiciously each instance of this table's opaque objects.
+
+The other optimization applied to the linear hash table in 'lhash-impl.h' --
+the one of 'str' being defined as 'char str[0]' -- cannot be carried out to the
+'ghash_node_t' structure either. This is due to a line of reasoning similar to
+the one above: the objects the Gnulib's hash table holds are opaque and, thus,
+one could not assemble such a 'ghash_node_t' struct for to pass it to the hash
+table without creating it on the free store. But one wouldn't and shouldn't want
+to pay the price of creating such an object on the free store for to destroy it
+moments later when realizing that the hash table already contains it.
+
+Unfortunately, the original public interface of Gnulib's hash table requires the
+user of its 'insert' operation to create potentially expensive objects prior to
+calling for the operation. This is the ground on which Path-Set had to alter the
+public interface of Gnulib's hash table: upon 'insert' operation, make the table
+return a pointer to the location where it stores internally the reference of the
+opaque object it holds. The pointer returned by 'insert' is unifying the separate
+cases the user of 'insert' has to handle upon the call to the operation:
+
+  (a) the object passed in to 'insert' is already existing, or
+  (b) the object is not present at all in the hash table.
+
+In the case (a), for to obtain the reference to the object in the table, one has
+to simply dereference the pointer received. In the case (b) -- and in this case
+only! -- the user of 'insert' has to actually create a new object. The user has
+to also make the hash table know about the newly created object by assigning the
+pointer value of this object to the location within the hash table to which the
+pointer he received refers. All these descriptions can more easily be grasped by
+looking at the source code of the function 'GHASH_INSERT' in file 'ghash-impl.h'.
+
+The differences seen on the column 'node-struct-size' of the tables above amount
+to the fact that Gnulib's generic hash table implementation was not modified up
+to the point of supporting 'CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS'. Consequently,
+the struct 'path_trie_node_t' corresponding to gnulib hash path tries has to use
+references to path element nodes not in the form of 32-bit offsets, but in the
+form of 64-bit pointers.
+
+
+4. Appendix: Node 'struct' Definitions
+======================================
+
+The commands below show the 'struct' definitions for all the node types of the
+'path-set' configurations used in section 1.
+
+  $ shopt +o extglob
+
+  $ cd src && . commands.sh
+
+  $ path-set-test -D ghash-plain-set
+  struct plain_ghash_node_t
+  {
+      uint64_t val;
+      char* str;
+  };
+
+  $ path-set-test -D ghash-plain-set --config-path-trie-32bit-offsets
+  struct plain_ghash_node_t
+  {
+      uint64_t val;
+      char* str;
+  };
+
+  $ path-set-test -D ghash-plain-set --config-32bit
+  struct plain_ghash_node_t
+  {
+      uint32_t val;
+      char* str;
+  };
+
+  $ path-set-test -D ghash-path-set
+  struct ghash_node_t
+  {
+      size_t len;
+      char* str;
+  };
+  struct path_trie_node_t
+  {
+      __attribute__((packed)) const struct ghash_node_t* elem;
+      __attribute__((packed)) struct path_trie_node_t* lo;
+      __attribute__((packed)) struct path_trie_node_t* hi;
+      __attribute__((packed)) union {
+          struct path_trie_node_t* eq __attribute__((packed));
+          uint64_t val __attribute__((packed));
+      };
+  };
+
+  $ path-set-test -D ghash-path-set --config-path-trie-32bit-offsets
+  struct ghash_node_t
+  {
+      size_t len;
+      char* str;
+  };
+  struct path_trie_node_t
+  {
+      __attribute__((packed)) const struct ghash_node_t* elem;
+      __attribute__((packed)) uint32_t lo;
+      __attribute__((packed)) uint32_t hi;
+      __attribute__((packed)) union {
+          uint32_t eq __attribute__((packed));
+          uint64_t val __attribute__((packed));
+      };
+  };
+
+  $ path-set-test -D ghash-path-set --config-32bit
+  struct ghash_node_t
+  {
+      size_t len;
+      char* str;
+  };
+  struct path_trie_node_t
+  {
+      __attribute__((packed)) const struct ghash_node_t* elem;
+      __attribute__((packed)) struct path_trie_node_t* lo;
+      __attribute__((packed)) struct path_trie_node_t* hi;
+      __attribute__((packed)) union {
+          struct path_trie_node_t* eq __attribute__((packed));
+          uint32_t val __attribute__((packed));
+      };
+  };
+
+  $ path-set-test -D lhash-path-set
+  struct lhash_node_t
+  {
+      uint8_t len;
+      char str[0];
+  };
+  struct path_trie_node_t
+  {
+      __attribute__((packed)) const struct lhash_node_t* elem;
+      __attribute__((packed)) struct path_trie_node_t* lo;
+      __attribute__((packed)) struct path_trie_node_t* hi;
+      __attribute__((packed)) union {
+          struct path_trie_node_t* eq __attribute__((packed));
+          uint64_t val __attribute__((packed));
+      };
+  };
+
+  $ path-set-test -D lhash-path-set --config-path-trie-32bit-offsets
+  struct lhash_node_t
+  {
+      uint8_t len;
+      char str[0];
+  };
+  struct path_trie_node_t
+  {
+      __attribute__((packed)) uint32_t elem;
+      __attribute__((packed)) uint32_t lo;
+      __attribute__((packed)) uint32_t hi;
+      __attribute__((packed)) union {
+          uint32_t eq __attribute__((packed));
+          uint64_t val __attribute__((packed));
+      };
+  };
+
+  $ path-set-test -D lhash-path-set --config-32bit
+  struct lhash_node_t
+  {
+      uint8_t len;
+      char str[0];
+  };
+  struct path_trie_node_t
+  {
+      __attribute__((packed)) const struct lhash_node_t* elem;
+      __attribute__((packed)) struct path_trie_node_t* lo;
+      __attribute__((packed)) struct path_trie_node_t* hi;
+      __attribute__((packed)) union {
+          struct path_trie_node_t* eq __attribute__((packed));
+          uint32_t val __attribute__((packed));
+      };
+  };
+
+Note that these are definitions produced by GCC's C preprocessor 'cpp' which ran
+on the same 64-bit platform as the one on which the tests files of section 2 got
+generated.
+
+
+5. References
+=============
+
+[1] x32 ABI
+    https://en.wikipedia.org/wiki/X32_ABI
+
+[2] Donald E. Knuth:
+    A Flame About 64-bit Pointers, 2008
+
+    http://www-cs-faculty.stanford.edu/~uno/news08.html:
+
+      It is absolutely idiotic to have 64-bit pointers when I compile a
+      program that uses less than 4 gigabytes of RAM. When such pointer
+      values appear inside a struct, they not only waste half the memory,
+      they effectively throw away half of the cache.
+      
+      The gcc manpage advertises an option "-mlong32" that sounds like
+      what I want. Namely, I think it would compile code for my x86-64
+      architecture, taking advantage of the extra registers etc., but it
+      would also know that my program is going to live inside a 32-bit
+      virtual address space.
+      
+      Unfortunately, the -mlong32 option was introduced only for MIPS
+      computers, years ago. Nobody has yet adopted such conventions for
+      today's most popular architecture. Probably that happens because
+      programs compiled with this convention will need to be loaded with
+      a special version of libc.
+      
+      Please, somebody, make that possible.
+      
+

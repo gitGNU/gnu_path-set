@@ -1,0 +1,854 @@
+
+                                    Path-Set
+                                    ~~~~~~~~
+                        Stefan Vargyas, stvar@yahoo.com
+
+                                  Sep  3, 2016
+
+
+Table of Contents
+-----------------
+
+0. Copyright
+1. The Path-Set Program
+   a. The Initiating Problem of Path-Set
+   b. Initial Choices Developing Path-Set
+   c. The Dictionary Data Structures of Path-Set
+2. Making a 'path-set' Binary
+3. Using 'path-set-test' Shell Function
+4. Using 'path-set-test-grep' Shell Function
+5: Appendix: The GNU/Linux Programs Used
+6. Appendix: Links to Json-Type and Gnulib
+7. References
+
+
+0. Copyright
+============
+
+This program is GPL-licensed free software. Its author is Stefan Vargyas. You
+can redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+You should have received a copy of the GNU General Public License along with
+this program (look up for the file COPYING in the top directory of the source
+tree). If not, see http://gnu.org/licenses/gpl.html.
+
+The source tree of Path-Set includes source files from two other free software
+projects: Json-Type [1] and Gnulib [2]. These source files were placed in two
+separate directories, in 'lib/json-type' and, respectively, 'lib/gnulib'.
+
+Each Json-Type and Gnulib source file in the 'lib' directory contains unaltered
+the original copyright and license notices.
+
+
+1. The Path-Set Program
+=======================
+
+1.a. The Initiating Problem of Path-Set
+---------------------------------------
+
+Path-Set's main vocation is that of a playground and test bed for a forest of
+data structures and associated algorithms exploring parts of the solution space
+of the following problem:
+
+   File Path Names Set Compression: given a huge list of realistic
+   file name paths (e.g. obtained from applying the 'find' command
+   to existing file systems) implement an *online dictionary* data
+   structure that stores internally its keys (i.e. the file path
+   names) such a way that the total amount of memory claimed by the
+   data structure from the free store to be *significantly less*
+   than the amount of memory one would need to actually store all
+   the keys as such.
+
+The problem stated above deserve a few clarifications. First to say is that
+the *online dictionary* data structure is to be understood as an in-memory
+associative array of key-value pairs, where the keys are strings. The data
+structure is providing (at least) three operations -- 'insert', 'lookup' and
+'delete' -- freely to be mixed while using them. The free mixing of the basic
+operations accounts for the *online* adjective used above: there is no separate
+internal processing stage needed for to achieve the expected memory gain.
+
+Second to remark is that a certain loss of speed of the 'insert' and 'lookup'
+operations of this data structure is acceptable as a trade-off favoring the
+desired memory consumption gain.
+
+The third thing -- that of the expected gain in memory consumption -- is the
+least clearly delineated. It is the main aim of Path-Set to experiment various
+data structures obeying the other conditions set forth above for to measure the
+memory consumptions implied.
+
+Interesting to note is that a starting point for Path-Set was a conversation
+thread on Coreutils's public discussion list from 2014 [5].
+
+1.b. Initial Choices Developing Path-Set
+----------------------------------------
+
+In the literature of algorithms circumscribing the problem of online dictionaries
+of strings there is well-known data structure -- the ternary search tree, TST, of
+Bentley and Sedgewick [3] -- which is simple, beautiful and quite efficient (see
+for example the accounts given in 'doc/trie-impl.txt' in Json-Type [1]).
+
+Path-Set chooses the TSTs as its main theme: the dictionary data structure with
+which it tackles the problem stated above is based on TSTs.
+
+Path-Set incorporates for comparison purposes relating to the issues mentioned
+by [5] and as a variant hash table implementation the Gnulib's [2] generic hash
+table -- the files 'lib/hash.{h,c}'.
+
+1.c. The Dictionary Data Structures of Path-Set
+-----------------------------------------------
+
+The online dictionaries of Path-Set come come in six base set structures, each
+having specific variants depending on compile-time configuration parameters.
+
+Path-Set defines a two-level naming scheme of its dictionaries. The inner naming
+level is comprised of the 'set' type: either 'ternary-tree', 'linear-hash' or
+'gnulib-hash'. The outer naming level is the 'struct' type: either 'plain-set'
+or 'path-trie'. The table below shows which structure is implemented by which
+source file:
+
+  set/struct    plain-set          path-trie
+  ------------  -----------------  ---------------
+  ternary-tree  trie-plain-set.c   trie-path-set.c
+  linear-hash   lhash-plain-set.c  lhash-path-set.c
+  gnulib-hash   ghash-plain-set.c  ghash-path-set.c
+
+The 'plain-set' structure types are plain sets -- the set themselves. The other
+structure type -- the 'path-trie' type -- stands for a new kind of dictionary
+data structure -- the 'Path Trie' -- and of which inner structure can be any of
+the already mentioned 'set' type. Therefore there are three kinds of path tries:
+ternary tree path tries, linear hash path tries and gnulib hash path tries.
+
+The 'ternary-tree' data structure is precisely the implementation of Bentley
+and Sedgewick's [3] ternary search trees (or tries). Important to note is that
+professor Sedgewick made available C implementations for the iterative variants
+of the 'insert' and 'lookup' operations of TSTs on his own site (see the links
+attached to reference entry [3], specifically the two C source files, 'tstdemo.c'
+and 'demo.c'). I used his C code as spring of inspiration for my implementation.
+
+The 'linear-hash' data structure is a simplistic implementation of the linear
+probing hash table of Knuth [4, pp. 526-528].
+
+The 'gnulib-hash' data structure is a modified version of Gnulib's [2] generic
+chained hash table implementation. The Gnulib's implementation was adapted to
+suit the internal interfaces of Path-Set. Instrumentation code was added for
+collecting statistics and a couple of dependencies were eliminated for to make
+the code functioning outside Gnulib. The differences to the original source
+files can be seen using the procedure described in the Appendix section below.
+
+The 'path-trie's are the ternary search tries of Bentley and Sedgewick [3] with
+their symbols being path elements instead of characters. This is to say that the
+keys of path tries are sequence of path elements and not strings (not sequence
+of characters). However, the path elements are strings: e.g. the path elements
+of path name '/tmp/foo/bar' are the strings '/', 'tmp/', 'foo/' and 'bar'. As a
+result, the path tries are using an inner dictionary data structure mapping path
+element strings to uniquely identifying pointers or 32-bit offsets. The 'insert'
+and 'lookup' operations of path tries are mere variants of those of TSTs.
+
+The six structures implemented by the source files named above are controlled by
+the following '#define' configuration parameters:
+
+  CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
+  -----------------------------------
+  This parameter determines whether the linear hash path trie data
+  structures uses 32-bit offsets instead of pointers for referencing
+  the path elements within the structure.
+
+  CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
+  -----------------------------------
+  This parameter determines whether the path trie data structures use
+  32-bit offsets instead of pointers for referencing the path trie nodes
+  within the structure.
+
+  CONFIG_PATH_TRIE_UINT_HASH_IDENTOP
+  ----------------------------------
+  The path trie data structure uses internally a 'PATH_TRIE_UINT_HASH'
+  hash function on unsigned integers. When this parameter is defined
+  the hash function is made to be the identity operation.
+
+  CONFIG_TRIE_PATH_SET_PRINT_SET
+  ------------------------------
+  The ternary tree path trie dictionary type (implemented in the source
+  file 'trie-path-set.c') defines a 'print-set' operation if and only if
+  this parameter was defined. The 'print-set' operation determines the
+  structure of the inner set used by this dictionary type: when needing
+  'print-set', the inner trie nodes have to use an additional pointer.
+
+  CONFIG_VALUE_TYPE_SIZE
+  ----------------------
+  Each dictionary structure has a user-defined value type defined to be
+  the type 'int${n}_t' where '${n}' is the value of this parameter.
+
+All of the above 'CONFIG_*' parameters are by default not defined. The parameter
+'CONFIG_VALUE_TYPE_SIZE' is an exception: it is defined as '__WORDSIZE'.
+
+
+2. Making a 'path-set' Binary
+=============================
+
+The six source files -- '{trie,lhash,ghash}-{plain,path}-set.c' -- mentioned
+in the previous subsection are compiled and linked into a 'path-set' binary.
+By specifying to the compiler different sets of 'CONFIG_*' configuration
+parameters, several kinds of 'path-set' binaries are to be obtained from it.
+
+All source files of 'path-set' are written in modern C and were developed under
+a GNU/Linux environment using the GCC C compiler v4.3.4 and an experimental
+v4.8.0 build from sources (a version which is not yet supporting `-std=c11').
+
+The header file 'config.h', located in the 'lib' directory of the source tree,
+defines a few more compile-time 'CONFIG_*' parameters which determine the proper
+functioning of 'path-set'. Before proceeding to build 'path-set', one must assure
+himself that each of these parameters in 'config.h' have a meaningful value, in
+accordance with  the target platform (machine and compiler) on which the program
+is supposed to be built.
+
+Important to note is that 'path-set' depends on it being build with GCC: it uses
+a few notable extensions to the C language and to the C standard library GCC is
+providing. Only two examples: the ubiquitous usage of the built-in function
+'__builtin_types_compatible_p' within a wide range of preprocessor macros
+and the extensively used C extension of the so called 'compound statement
+enclosed in parentheses' expressions (also for the construction of a wide
+array of useful C macros).
+
+The 'path-set' binary is supposed to be build by GNU Make. I used version 3.81.
+To start the build procedure one has to issue a 'make' command of the following
+kind from within the 'src' directory of the source tree:
+
+  $ cd src
+
+  $ make ARGS...
+
+The 'CONFIG_*' parameters are passed in to 'make' in one of the two forms below:
+
+  'make' argument       'gcc' argument
+  --------------------  ---------------------
+  CONFIG+=$NAME         -DCONFIG_$NAME
+  CONFIG+=$NAME=$VALUE  -DCONFIG_$NAME=$VALUE
+
+$NAME is the name of the respective configuration parameter (stripped of the
+common prefix 'CONFIG_') and $VALUE is the value assigned to the respective
+parameter if it has such assignable value (the previous subsection indicates
+that only 'CONFIG_VALUE_TYPE_SIZE' accepts assigning a value to it).
+
+Alongside these 'CONFIG_*' parameters there are three more such configuration
+parameters that control the way a 'path-set' binary is built:
+
+  parameter  argument   default      'gcc' arguments
+  ---------  ---------  -----------  ---------------
+  32BIT      no|yes     no           -DBIT32 -m32
+  DEBUG      no|yes     yes          -DDEBUG -g
+  OPT        0|1|2|3|4  not defined  -DOPT=$n -O$n
+
+The meanings of '32BIT', 'DEBUG' and 'OPT' are obvious taking into consideration
+the arguments 'make' pass in to 'gcc'. Only note that having 'DEBUG=yes' on the
+'make' invocation command line enables 'DEBUG' in all source files making up a
+'path-set' binary. This brings in the binary quite a lot of runtime checking
+code due to the many ASSERT macro calls scattered throughout the source files.
+
+An empty invocation command line of 'make' produces the following output:
+
+  $ make
+  gcc -Wall -Wextra -std=gnu99 \
+  -I. -I../lib/json-type -I../lib/gnulib \
+  -DPROGRAM=path-set -DDEBUG -g \
+  main.c common.c clocks.c set-intf.c \
+  trie-path-set.c lhash-path-set.c ghash-path-set.c \
+  trie-plain-set.c lhash-plain-set.c ghash-plain-set.c \
+  ../lib/json-type/pool-alloc.c ../lib/gnulib/hash.c \
+  -o path-set -lm
+
+Upon building it, 'path-set' can be asked to produce brief help info on stdout:
+
+  $ ./path-set --help
+  usage: path-set [ACTION|OPTION]...
+  where actions are specified as:
+    -C|--print-config        do nothing but print out the config parameters
+    -I|--print-sizes         do nothing but print out the node struct sizes
+                               associated to the set structure specified by
+                               options `-r|--struct-type' and `-s|--set-type'
+    -N|--print-names         do nothing but print out the statistics parameter
+                               names associated to the set structure specified
+                               by options `-r|--struct-type' and `-s|--set-type'
+    -L|--load-only           only load in the input (default)
+    -P|--[print-]set         print out the path set
+    -E|--[print-]elems       print out the path elements
+  the options are:
+    -p|--pool-size NUM[KM]   preallocated memory pool size (default 128K)
+    -h|--hash-size NUM[KM]   by case, the linear hash table size or the gnulib
+                               hash table initial size (default 1K)
+    -r|--struct-type TYPE    use the specified structure type: any of l|plain-set
+       --plain-set             or p[ath-trie]; the default is path-trie
+       --path-trie
+    -s|--[set-]type TYPE     use the specified set type: any of t[ernary-tree],
+       --ternary-tree          l[inear]-hash or g[nulib-hash]; the default
+       --linear-hash           is ternary-tree
+       --gnulib-hash
+    -t|--sep[arator]s STR    use the given chars as separators of path elements
+                               in path tries; the default char set is '/.-'
+    -S|--[no-][print-]stats  print out some statistics information or
+                               otherwise do not (default not)
+       --dump-options        print options and exit
+    -V|--[no-]verbose        be verbose or otherwise do not (default not)
+       --help-stats          print info about the statistics parameters and exit
+    -v|--version             print version numbers and exit
+    -?|--help                display this help info and exit
+
+The program takes in from stdin file path names separated by newline characters.
+Its output is determined by the action option specified. Only `--dump-options',
+`--help-stats', `-v|--version' and `-?|--help' are ignoring any action option
+given in the command line for to produce on stdout their own kind of output.
+
+The meanings of almost all the command line options above are obvious (having in
+mind the descriptions made in the previous section). Only note that the command
+line option `-p|--pool-size' defines the amount of free store memory claimed in
+advance by the fixed-size memory pool of 'path-set'. The memory pool is used for:
+
+  (a) the nodes of the main structure, being it 'plain-set' or 'path-trie';
+  (b) the nodes of the path element structure, only in case of 'path-trie's
+      when 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' was not defined.
+  (c) the file name paths in the case of '{linear,gnulib}-hash' 'plain-set's;
+  (d) the file name path elements in case of '{linear,gnulib}-hash' 'path-trie's.
+
+If building 'path-set' with 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' defined, then
+the help info would include an extra `-n|--node-size' command line option:
+
+  $ ./path-set --help|grep -e --node-size
+    -n|--node-size NUM[KM]   the path trie table initial size (default 1K)
+
+The command line option `-n|--node-size' defines the size of the table used for
+allocating contiguously path element nodes in the 'path-trie' structure. This
+contiguous placement of path element nodes allows the usage of 32-bit offsets
+instead of pointers for to refer to these nodes within the structure itself.
+
+Given that the 'make' command line above contained no configuration parameter
+specifications, the invocation of 'path-set' below displays the defaults the
+configuration parameters received: 
+
+  $ ./path-set -C
+  CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS: no
+  CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS: no
+  CONFIG_PATH_TRIE_UINT_HASH_IDENTOP:  no
+  CONFIG_TRIE_PATH_SET_PRINT_SET:      no
+  CONFIG_VALUE_TYPE_SIZE:              64
+  32BIT:                               no
+  DEBUG:                               yes
+  OPT:                                 -
+
+The parameter 'CONFIG_VALUE_TYPE_SIZE' above has the value '64' because I ran
+'make' on an x86-64 GNU/Linux platform which defined '__WORDSIZE' to be 64.
+
+A 'path-set' command line containing only `--dump-options' shows the defaults
+the runtime options of the program received:
+
+  $ ./path-set --dump-options
+  action:      load-only
+  struct-type: path-trie
+  set-type:    ternary-tree
+  pool-size:   128K
+  hash-size:   1K
+  sep-set:     /.-
+  print-stats: no
+  verbose:     no
+  argc:        0
+
+When the option `-n|--node-size' is enabled, its default value is shown to be:
+
+  $ ./path-set --dump-options|grep -e node-size
+  node-size:   1K
+
+
+3. Using 'path-set-test' Shell Function
+=======================================
+
+Alongside 'path-set' binaries, Path-Set is comprised of two more programs -- two
+shell functions defined in the 'bash' script 'src/commands.sh': 'path-set-test'
+and 'path-set-test-grep'. Before one attempts to use these functions, the shell
+script must be sourced in at the 'bash' command line prompt:
+
+  $ shopt -s extglob
+
+  $ cd src && . commands.sh
+
+Important note: the 'bash' script 'src/commands.sh' needs the extended pattern
+matching features to be enabled prior to sourcing it in. When 'extglob' isn't set
+in the current 'bash' environment, loading 'src/commands.sh' fails with an error
+message.
+
+The main functionality of shell function 'path-set-test' is to run series of
+tests on 'path-set' binaries which it builds according to the configuration
+parameters it receives as input and to record in text files all the statistics
+information obtained from 'path-set'.
+
+However, the details of using 'path-set-test' are a bit more involved. The shell
+function accepts the following the command line options:
+
+  $ funchelp -f commands.sh -c path-set-test --long-wrap-join=auto
+  actions:
+    -A|--averages[-results]=FILE   averages results
+    -b|--[build-]binary            build binary
+    -B|--[test-]base=NUM           test base (default)
+    -D|--node-[struct-]def[=NAME]  print node struct def (`-D+' gets all defs;
+                                     `-D?' prints out all names and exit)
+    -N|--[print-]stat-names        print stat names
+    -R|--[test-]results=FILE       test results
+    -S|--stat[istic]s              collect statistics
+    -t|--[run-]test=NUM            run test
+    -T|--[run-]tests               run tests
+    -E|--[run-]series              run series
+  
+  options:
+    -C:|--config-NAME              define the named 'path-set' config parameter
+        --config-NAME=VALUE          (`-C?' prints out all names and exit)
+    -e|--[range-]expr=EXPR         tests range expression (function of 'x')
+                                     (default: '10 ** x')
+    -i|--input=FILE                input file (default: 'files.txt')
+    -l|--[range-]limits=NUM[-NUM]  tests range limits (default: '1-6')
+    -o|--output=FILE               output file when action is '-E' or '-T' ('+'
+                                     means to generate a SHA1 name) (default: '-'
+                                     aka stdout)
+    -O:|--NAME                     define the named 'path-set' command line
+        --NAME=VALUE                 option (`-O?' prints out all names and exit)
+    -p:|--stat-NAME                account for the named 'path-set' stat
+                                     parameter (default: 'total-node-mem') (`-p?'
+                                     prints out all names and exit)
+    -q|--quiet                     be quiet -- suppress normal output when action
+                                     is '-E' or '-T' and output doesn't go to
+                                     stdout
+    -r|--repeat=NUM                number of times to repeat the 'path-set'
+                                     command (default: 10)
+    -s|--sleep=NUM                 microseconds to sleep between repeats
+                                     (default: 100)
+
+The input it expects and the output 'path-set-test' produces are controlled by
+the last action option specified in the invoking command line. The `--config-*'
+parameters are as follows:
+
+  $ path-set-test -C?
+  path-trie-32bit-offsets
+  path-trie-node-32bit-offsets
+  path-trie-elem-32bit-offsets
+  path-trie-uint-hash-identop
+  trie-path-set-print-set
+  value-type-size=8|16|32|64
+  32bit
+  debug
+  optimize
+
+Note that the configuration parameter 'path-trie-32bit-offsets' is merely a
+shortcut for the configuration parameters 'path-trie-{node,elem}-32bit-offsets':
+specifying 'path-trie-32bit-offsets' on a command line is like having specified
+both of the other two configuration parameters.
+
+The 'path-set' command line options passed in from 'path-set-test' are:
+
+  $ path-set-test -O?
+  pool-size=NUM[KM]
+  hash-size=NUM[KM]
+  node-size=NUM[KM]
+  struct-type=TYPE
+  set-type=TYPE
+  separators=STR
+  plain-set
+  path-trie
+  ternary-tree
+  linear-hash
+  gnulib-hash
+
+When these 'path-set' options are not specified in the 'path-set-test' command
+line they receive the following default values:
+
+  'path-set' option  default value
+  -----------------  -------------
+  --pool-size        128M
+  --hash-size        2M
+  --node-size        4M
+  --struct-type      plain-set
+  --set-type         gnulib-hash
+  --separators       '/'
+
+Important to note is that some of the command line options of 'path-set-test'
+can be omitted from an invoking command line if defined by way of associated
+environment variables:
+
+  'path-set-test' option  environment variable
+  ----------------------  -------------------------
+  --input                 PATH_SET_TEST_INPUT
+  --expr                  PATH_SET_TEST_EXPR
+  --limits                PATH_SET_TEST_LIMITS
+  --pool-size             PATH_SET_TEST_POOL_SIZE
+  --hash-size             PATH_SET_TEST_HASH_SIZE
+  --node-size             PATH_SET_TEST_NODE_SIZE
+  --struct-type           PATH_SET_TEST_STRUCT_TYPE
+  --set-type              PATH_SET_TEST_SET_TYPE
+  --separators            PATH_SET_TEST_SEPARATORS
+
+The action options of 'path-set-test' work as described below:
+
+  ==========================================================================
+  -A|--average-results=$FILE
+  --------------------------------------------------------------------------
+  * input: the file '$FILE' obtained from running the shell function with
+    action option `-t|--run-test' and the name of a 'path-set' stat parameter
+    given by option `-p|--stat-$NAME';
+  * output: a list of the following values: the minimum 'min', the maximum
+    'max', the average 'avg', the variance 'var' and the standard deviation
+    'dev' of the 'avg' column of the table recorded in the file $FILE, table
+     obtained from calling itself with action option `-R|--test-results' and
+     option `-p|--stat-$NAME'.
+  ==========================================================================
+  -b|--build-binary
+  --------------------------------------------------------------------------
+  * input: all `--config-*' parameters;
+  * output: a 'path-set' binary built according to the specified `--config-*'
+    parameters; the parameters not given on the invoking command line are
+    left undefined; there are two exceptions: the 'make' arguments '32BIT'
+    and 'DEBUG' corresponding to `--config-32bit' and `--config-debug' get
+    assigned the value 'no'.
+  ==========================================================================
+  -B|--test-base=$NUM
+  --------------------------------------------------------------------------
+  * input: a 'path-set' binary, the number '$NUM' and the options:
+      `--input',
+      `--pool-size',
+      `--hash-size',
+      `--node-size',
+      `--struct-type',
+      `--set-type', and
+      `--separators';
+  * output: the statistics info printed out by 'path-set' invoked with the
+    command line option `-L|--load-only'; the input provided to 'path-set'
+    consists of a random selection of '$NUM' lines from the file '$input'.
+  ==========================================================================
+  -D|--node-struct-def=$NAME
+  --------------------------------------------------------------------------
+  * input: all `--config-*' parameters and '$NAME' (which is allowed to be
+    '{trie,lhash,ghash}-{plain,path}-set');
+  * output: the C language declarations of the node structures defined by
+    the source file '$NAME.c' (subsection 1.c above gives details about
+    these source files).
+  ==========================================================================
+  -E|--run-series
+  --------------------------------------------------------------------------
+  * input: all `--config-*' parameters, and the options:
+      `--input',
+      `--expr',
+      `--limits',
+      `--pool-size',
+      `--hash-size',
+      `--node-size',
+      `--separators',
+      `--repeat', and
+      `--sleep';
+  * output: a specially formatted text describing the context and the output
+    of running the shell function itself with action option `-T|--run-tests'
+    for each combination of `--struct-type' and `--set-type'. Before calling
+    itself for `-T|--run-tests' the shell function builds a 'path-set' binary
+    corresponding to the `--config-*' parameters it received in the invoking
+    command line. This is accomplished by calling itself with action option
+    `-b|--build-binary'.
+  ==========================================================================
+  -N|--print-stat-names
+  --------------------------------------------------------------------------
+  * input: a 'path-set' binary and the options:
+      `--struct-type' and
+      `--set-type';
+  * output: that output obtained from invoking 'path-set' with action option
+    `-N|--print-names' and options `--$struct_type', and `--$set_type'.
+  ==========================================================================
+  -R|--test-results=$FILE
+  --------------------------------------------------------------------------
+  * input: the file '$FILE' obtained from running the shell function with
+    action option `-t|--run-test' and the name of a 'path-set' stat parameter
+    given by option `-p|--stat-$NAME';
+  * output: a table aggregating the values of '$NAME' stat parameter, one
+    line per each command 'path-set-test -t $NUM' found in the file '$FILE'.
+  ==========================================================================
+  -S|--statistics
+  --------------------------------------------------------------------------
+  * input: a 'path-set' binary, the options:
+      `--struct-type' and
+      `--set-type',
+    and the output obtained from of a series of calls to itself with action
+    option `-B|--test-base' and options `--$struct_type' and `--$set_type';
+  * output: a formatted table collecting the set of statistics parameters and
+    their values obtained from the series of calls to `-B|--test-base'.
+  ==========================================================================
+  -t|--run-test=$NUM
+  --------------------------------------------------------------------------
+  * input: a 'path-set' binary, the number '$NUM' and the options:
+      `--input',
+      `--pool-size',
+      `--hash-size',
+      `--node-size',
+      `--struct-type',
+      `--set-type',
+      `--separators',
+      `--repeat', and
+      `--sleep';
+  * output: the shell function calls itself '$repeat' times for action option
+    `-B|--test-base=$NUM' (it sleeps '$sleep' microseconds between repeats);
+    the output of the series of `-B|--test-base=$NUM' is piped in to a call
+    to itself with action option `-S|--statistics'. The output obtained from
+    this latter call to itself is that provided to the caller.    
+  ==========================================================================
+  -T|--run-tests
+  --------------------------------------------------------------------------
+  * input: a 'path-set' binary and the options:
+      `--input',
+      `--expr',
+      `--limits',
+      `--pool-size',
+      `--hash-size',
+      `--node-size',
+      `--struct-type',
+      `--set-type', and
+      `--separators';
+  * output: a specially formatted text describing the context and the output
+    of running the shell function itself with action option `-t|--run-test=$n'
+    for each number '$n' generated by expression '$expr' on the range defined
+    by '$limits'. The text produced contains also the output of running the
+    shell function with action option `-R|--test-results=$FILE' and option
+    `-p|--stat-$NAME', for each stat parameter '$NAME' 'path-set' provides
+    for the set structure defined by `--$struct_type' and `--$set_type'.
+    '$FILE' is a temporary text file recording the context, the command line
+    and the output of each of the calls to itself in the `-t|--run-test'
+    series just issued.
+  ==========================================================================
+
+If in doubt about what a given 'path-set-test' command line does, or, otherwise,
+when wanting to hack some behavior of the shell function, one has to only append
+`-d' to the respective command line for to obtain the text of the 'bash' script
+which gets generated and executed internally:
+
+  $ path-set-test ... -d|less
+
+
+4. Using 'path-set-test-grep' Shell Function
+============================================
+
+The shell function 'path-set-test-grep' processes the test result data --
+the statistics information obtained from 'path-set-test' -- for to arrange
+it in several convenient formats.
+
+For using 'path-set-test-grep', one must be acquainted with the shell function
+'path-set-test' first. The command line options of 'path-set-test-grep' are
+as follows:
+
+  $ funchelp -f commands.sh -c path-set-test-grep --long-wrap-join=auto
+  actions:
+    -E|--[grep-]series      grep series
+    -T|--[grep-]tests       grep tests (default)
+    -G|--raw-text           print raw grepped text
+    -L|--raw-list           print raw text list
+    -M|--[formatted-]list   print formatted text list
+    -R|--raw-table          print raw text table
+    -F|--[formatted-]table  print formatted table
+  
+  options:
+    -e|--exclude-config     exclude all the 'config-*' parameters from output
+    -H|--[with-]filename    print out the test file name for each match
+    -n|--not                negate the next 'path-set-test' command line option
+    -O:|--NAME              define the named 'path-set-test' command line option
+        --NAME=VALUE          (`-O?' prints out all names and exit)
+    -p:|--stat-NAME         account for the named 'path-set' stat parameter
+        --stat-NAME=VALUE     (cumulative); the value is of form NUM[.NUM][KMG]
+                              (`-p?' prints out all names and exit)
+    -t|--[ran-]test=NUM     filter for the output of commands of form
+                              'path-set-test --run-test=NUM' -- when action is
+                              '-[FLMR]' (default: '1000000')
+    -V|--verbose            be verbose when action is '-[FLMR]'
+
+The input of 'path-set-test-grep' consists of the SHA1-named test files which
+were produced by 'path-set-test' in the current directory. The output of the
+shell function depends on the last action option given on the invoking command
+line. It is either a set of SHA1-named file names (in case of `-E|--grep-series'
+and `-T|--grep-tests') or text obtained out these SHA1-named test files.
+
+The output of 'path-set-test-grep' is also controlled by the options of type
+`-O|--NAME|--NAME=VALUE'. The set of this kind of options given in the invoking
+command line composes the grepping criteria based on which 'path-set-test-grep'
+selects the SHA1-named test files for extracting data from.
+
+The action options of 'path-set-test-grep' produce output as described below:
+
+  ==========================================================================
+  -E|--grep-series
+  --------------------------------------------------------------------------
+  * output: the SHA1-named series files matching the criteria defined by
+    options `-O|--NAME|--NAME=VALUE' present in the invoking command line.
+  ==========================================================================
+  -F|--formatted-table
+  --------------------------------------------------------------------------
+  * output: a formatted table of the one provided by `-R|--raw-table'.
+  ==========================================================================
+  -G|--raw-text
+  --------------------------------------------------------------------------
+  * output: the raw text filtered out of the set of test files matching the
+    criteria defined by the options `-O|--NAME|--NAME=VALUE' given. The text
+    is made of a series of name/value pairs separated by TAB chars, for each
+    'path-set' configuration parameter and for each stat parameter specified
+    in the command line by an option like `-p|--stat-NAME|--stat-NAME=VALUE',
+    parameters that were recorded in the matching test files. The groups of
+    name/value pairs that come out from different test files are separated
+    by empty lines.
+  ==========================================================================
+  -L|--raw-list
+  --------------------------------------------------------------------------
+  * output: basically the one provided by `-G|--raw-text' with the list of
+    name/value pairs being reordered and including new pairs for computed
+    stat parameters (those that were specified by `-p|--stat-NAME=VALUE').
+  ==========================================================================
+  -M|--formatted-list
+  --------------------------------------------------------------------------
+  * output: a formatted version of the one provided by `-L|--raw-list'.
+  ==========================================================================
+  -R|--raw-table
+  --------------------------------------------------------------------------
+  * output: basically the one provided by `-G|--raw-text' with the list of
+    name/value pairs being rearranged in table format (TAB chars separating
+    the columns) and including new pairs for computed stat parameters (those
+    that were specified by `-p|--stat-NAME=VALUE'). The table is sorted by
+    the  columns corresponding to stat parameters, if such parameters were
+    specified in the invoking command line.
+  ==========================================================================
+  -T|--grep-tests
+  --------------------------------------------------------------------------
+  * output: the SHA1-named tests files matching the criteria defined by the
+    options `-O|--NAME|--NAME=VALUE' present in the invoking command line.
+  ==========================================================================
+
+As for the case of shell function 'path-set-test', appending the option `-d' to
+a 'path-set-test-grep' command line produces the text of the 'bash' script which
+gets generated and executed internally:
+
+  $ path-set-test-grep ... -d|less
+
+
+5: Appendix: The GNU/Linux Programs Used
+========================================
+
+The programs used by the shell functions in file 'src/commands.sh' are:
+
+  * GNU awk 3.1.8
+  * GNU bash 3.2.51
+  * GNU coreutils 8.12 (cp, date, echo, env, head, mktemp, rm, sha1sum, shuf,
+      sleep, sort, stdbuf, tee, tr, uniq)
+  * GNU diffutils 2.8.7 (cmp, diff)
+  * GNU findutils 4.4.0 (find, xargs)
+  * GNU gcc 4.3.4
+  * GNU grep 2.7
+  * GNU make 3.81
+  * GNU sed 4.1.5
+  * git 1.6.0
+  * super-sed 3.62
+
+Note that 'diff' and 'git' are used only by the shell function 'git-repo-diff'.
+
+
+6. Appendix: Links to Json-Type and Gnulib
+==========================================
+
+The table below lists the SHA1 hashes of the original files brought in 'lib'
+directory from Json-Type's and Gnulib's 'git' repositories:
+
+  SHA1 hash                                 file name
+  ----------------------------------------  -------------------------
+  bd82a90d2881d2aa588ea72855f788cf8904e9be  json-type/config.h
+  d12bf27027475b25022bef19c5ac2937ac66b867  json-type/int-traits.h
+  07c11ea53bad8435fd076ff626e779e54a4dc35a  json-type/pool-alloc.c
+  909a7e1aea388521ed619628c178b8fff13e796e  json-type/pool-alloc.h
+  53e49832ca9604f9d53774c4d92f20e638eddfaa  json-type/ptr-traits.h
+  9a05940bb563a5630d4e221dfeebf463f2c9bd8d  json-type/stack-impl.h
+  ----------------------------------------  -------------------------
+  f9dede0a8336dc1a328c5a56f9803f22becd4502  gnulib/hash.c
+  b61bee63ba11bbc59a0795c76e009d14f4cf1c63  gnulib/hash.h
+  44f16441c79a1e4df74fe379042d291fc78a61a4  gnulib/xalloc-oversized.h
+  ----------------------------------------  -------------------------
+
+The commands below show which of these source files are modified versions of
+the original ones. Note that $JSON_TYPE_HOME and $GNULIB_HOME are the paths
+to the directories hosting Json-Type's and, respectively, Gnulib's local 'git'
+repositories. (The URLs of the respective public 'git' repositories are listed
+in the References section below.)
+
+  $ shopt -s extglob
+
+  $ . src/commands.sh
+
+  $ git-repo-diff -g $JSON_TYPE_HOME --json-type|lsdiff -s
+
+  $ git-repo-diff -g $GNULIB_HOME --gnulib|lsdiff -s
+  ! hash.c
+  ! hash.h
+
+The first of the two invocations of shell function 'git-repo-diff' produced an
+empty output. This indicates that the source files originating from Json-Type
+were not changed at all.
+
+Note that each of the commands above expects to be issued from within the top
+directory of Path-Set source tree. The command line options of shell function
+'git-repo-diff' are as follows:
+
+  $ funchelp -f commands.sh -c git-repo-diff --long-wrap-join=auto
+    -b|--ignore-space-change  pass '-b|--ignore-space-change' to diff
+    -g|--git-dir=DIR          'git' repo directory (default: '$HOME/$target')
+    -s|--sha1-hashes=FILE     sha1 hashes file name ('-' means stdin, the default
+                                is 'README')
+    -t:|--target=NAME         target name: 'json-type' or 'gnulib' (default:
+        --json-type             'json-type')
+        --gnulib
+    -u|--unified=NUM          pass '-u|--unified=NUM' to diff
+
+
+7. References
+=============
+
+Free Software:
+
+[1] Json-Type: JSON Push Parsing and Type Checking
+    http://www.nongnu.org/json-type/
+
+    git://git.sv.nongnu.org/json-type
+
+[2] Gnulib - The GNU Portability Library
+    http://www.gnu.org/software/gnulib/
+
+    git://git.sv.gnu.org/gnulib
+
+Papers & Books:
+
+[3] Jon L. Bentley, Robert Sedgewick:
+    Fast Algorithms for Sorting and Searching Strings
+    8th Symposium on Discrete Algorithms, 1997, 360-369.
+
+    http://www.cs.princeton.edu/~rs/strings/paper.pdf
+
+    http://www.cs.princeton.edu/~rs/strings/index.html
+    http://www.cs.princeton.edu/~rs/strings/tstdemo.c
+    http://www.cs.princeton.edu/~rs/strings/demo.c
+
+[4] Donald E. Knuth
+    The Art of Computer Programming,
+    Vol. 3, Sorting and Searching, 2nd ed.
+    Addison Wesley Longman, 1998, 780 pages
+    ISBN 978-0-201-89685-0
+
+Mailing Lists:
+
+[5] Rasmus Borup Hansen: My experience with using cp to copy a lot of files
+      (432 millions, 39 TB)
+    Coreutils Archives, 11 Aug 2014
+
+    https://lists.gnu.org/archive/html/coreutils/2014-08/msg00012.html;
+
+    Pádraig Brady: Re: My experience with using cp to copy a lot of files
+      (432 millions, 39 TB)
+    Coreutils Archives, 14 Sep 2014
+
+    http://lists.gnu.org/archive/html/coreutils/2014-09/msg00020.html:
+
+      BTW there is a lot of redundancy in all the stored paths,
+      which could be improved by using a prefix compression method.
+
+

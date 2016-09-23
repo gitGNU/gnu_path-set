@@ -1,0 +1,53 @@
+/* Copyright (C) 2016  Stefan Vargyas
+ * 
+ * This file is part of Path-Set.
+ * 
+ * Path-Set is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * Path-Set is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with Path-Set.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+define is_prime(n)
+{
+    auto d, s
+    if ((n % 2) == 0)
+        return 0
+    d = 3
+    s = 4
+    /* print "^ n=", n, " s=", s, " d=", d, " n%d=", (n % d), "\n" */
+    while (s < n && (n % d)) {
+        d += 1
+        s += (4 * d)
+        d += 1
+        /* print ". n=", n, " s=", s, " d=", d, " n%d=", (n % d), "\n" */
+    }
+    return (s >= n)
+}
+
+define next_prime(n) 
+{
+    if ((n % 2) == 0)
+        n += 1
+    while (!is_prime(n))
+        n += 2
+    return (n)
+}
+
+define prev_prime(n) 
+{
+    if ((n % 2) == 0)
+        n -= 1
+    while (!is_prime(n))
+        n -= 2
+    return (n)
+}
+
