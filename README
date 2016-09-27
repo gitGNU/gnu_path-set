@@ -17,7 +17,7 @@ Table of Contents
 2. Making a 'path-set' Binary
 3. Using 'path-set-test' Shell Function
 4. Using 'path-set-test-grep' Shell Function
-5: Appendix: The GNU/Linux Programs Used
+5. Appendix: The GNU/Linux Programs Used
 6. Appendix: Links to Json-Type and Gnulib
 7. References
 
@@ -725,7 +725,7 @@ gets generated and executed internally:
   $ path-set-test-grep ... -d|less
 
 
-5: Appendix: The GNU/Linux Programs Used
+5. Appendix: The GNU/Linux Programs Used
 ========================================
 
 The programs used by the shell functions in file 'src/commands.sh' are:
