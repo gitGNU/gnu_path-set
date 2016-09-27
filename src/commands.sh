@@ -662,7 +662,7 @@ path-set-test()
                     echo -e "${stal// /\\n}"
                     return 0
                 }
-                [[ -n "$OPT" || "${OPTARG}" == $stax ]] || {
+                [[ -n "$OPT" || "$OPTARG" == $stax ]] || {
                     error -i
                     return 1
                 }
@@ -1727,7 +1727,7 @@ path-set-test-grep()
                     echo -e "${stal// /\\n}"
                     return 0
                 }
-                [[ -n "$OPT" || "${OPTARG}" =~ ^${stal// /|}(=$perx)?$ ]] || {
+                [[ -n "$OPT" || "$OPTARG" =~ ^${stal// /|}(=$perx)?$ ]] || {
                     error -i
                     return 1
                 }
@@ -2313,7 +2313,7 @@ git-repo-diff()
             [b])
                 optopt
                 ;;
-            t)	[[ -n "$OPT" || "${OPTARG}" == $trgx ]] || {
+            t)	[[ -n "$OPT" || "$OPTARG" == $trgx ]] || {
                     error -i
                     return 1
                 }
