@@ -1568,6 +1568,7 @@ path-set-test-grep()
 
     local P0=() # stev: '-p|--stat-NAME=ARG' names
     local P1=() # stev: '-p|--stat-NAME=ARG' args
+    local P2=0  # stev: '-p|--stat-NAME=+' count
     local p2=''
 
     local v
@@ -1727,7 +1728,10 @@ path-set-test-grep()
                     echo -e "${stal// /\\n}"
                     return 0
                 }
-                [[ -n "$OPT" || "$OPTARG" =~ ^(${stal// /|})(=$perx)?$ ]] || {
+                [[ -n "$OPT" || \
+                    "$OPTARG" =~ ^(${stal// /|})(=$perx)?$ || \
+                    "$OPTARG" =~ ^(${stal// /|})=\+$ && \
+                    "${OPTARG:$((${#OPTARG} - 6))}" == '-mem=+' ]] || {
                     error -i
                     return 1
                 }
@@ -1737,7 +1741,9 @@ path-set-test-grep()
                     error --long -o
                     return 1
                 }
-                [[ -z "$OPTN" || "$OPTARG" =~ ^$perx$ ]] || {
+                [[ -z "$OPTN" || "$OPTARG" =~ ^$perx$ || \
+                    "${OPT:$((${#OPT} - 4))}" == '-mem' && \
+                    "$OPTARG" == '+' ]] || {
                     error --long -i
                     return 1
                 }
@@ -1750,6 +1756,12 @@ path-set-test-grep()
                     P1[${#P1[@]}]="$OPTARG"
                 }
                 p+="${p:+ }${OPT:5}"
+                [[ -n "$OPTN" && "$OPTARG" == '+' ]] && {
+                    P0[${#P0[@]}]="${OPT:5}$v%%"
+                    P1[${#P1[@]}]="+${OPT:5}"
+                    p+="${p:+ }${OPT:5}"
+                    (( P2 ++ ))
+                }
                 ;;
             *)	error --long -g
                 return 1
@@ -1798,7 +1810,119 @@ path-set-test-grep()
         fi
     fi
 
+    local sn='
+            BEGIN {
+                U[0] = ""
+                U[1] = "K"
+                U[2] = "M"
+                U[3] = "G"
+                U[4] = "T"
+            }
+            function round(x)
+            { return int(x + 0.5) }
+            function num(n,	i, q)
+            {
+                n = round(n)
+                for (i = 4; i >= 0; i --) {
+                    q = n / (1024 ** i)
+                    if (int(q) > 0)
+                        break
+                }
+                return sprintf( \
+                    n > 0 && n % (1024 ** i) != 0 \
+                    ? "%.1f%s" : "%lu%s", \
+                    q, U[i])
+            }'
+
     local c
+    local k
+
+    if [ "$P2" -gt 0 ]; then
+        local a="$sn"'
+            {
+                if (FNR == 1) {
+                    for (k = 1; k <= NF; k ++) {
+                        if ($k == col)
+                            break 
+                    }
+                    if (k > NF) {
+                        printf("'$self': error: internal: " \
+                            "column \x27%s\x27 not found\n", col) \
+                            > "/dev/stderr"
+                        error = 1
+                        exit 1
+                    }
+                }
+                else {
+                    s += $k
+                    n ++
+                }
+            }
+            END {
+                if (!error)
+                    print n ? num(s / n) : 0
+            }'
+
+        local A=''
+        # do not quote $base, $cfgl, $opta below
+        for n in $cfgl $base $opta; do
+            assign2 v "${n//-/_}"
+            [ -z "$v" ] && continue
+            case "${v:0:1}" in
+                =)	;;
+                !)	A+="${A:+ }--not" ;;
+                *)	error "internal: unexpected ${n//-/_}='$v'"
+                    return 1
+                    ;;
+            esac
+            v2="${v:1}"
+            if [[ "$n" == @(expr|separators) ]]; then
+                quote2 v2
+            else
+                quote v2
+            fi
+            [[ "$n" == @(struct|set)-type ]] && n=''
+            A+="${A:+ }--${n:+$n}${v2:+${n:+=}$v2}"
+        done
+        local t2="$t"
+        quote t2
+        A+="${A:+ }-t $t2"
+
+        local c0="\
+set -o pipefail &&
+$self -Re${A:+ $A}"
+
+        c="\
+$c0 --stat-line-mem|
+awk -F '\t' -v col=line-mem '$a'"
+        [ "$x" == 'echo' ] && echo "$c"
+        v="$(eval "$c")"
+        local r="$?"
+        [ "$r" -eq 0 -o "$r" -eq 141 -o "$r" -eq 123 ] || { #!!!HACKISH
+            error "inner command failed: $self [0]: $r"
+            return 1
+        }
+
+        for ((k=0; k<${#P1[@]}; k++)); do
+            n="${P1[k]}"
+            [ "${n:0:1}" != '+' ] && continue
+            if [ "${#n}" -eq 1 ]; then
+                P1[$k]="$v"
+            else
+                c="\
+$c0 --stat-${n:1} --plain-set --gnulib-hash|
+awk -F '\t' -v col=${n:1} '$a'"
+                [ "$x" == 'echo' ] && echo "$c"
+                v2="$(eval "$c")"
+                r="$?"
+                [ "$r" -eq 0 -o "$r" -eq 141 -o "$r" -eq 123 ] || { #!!!HACKISH
+                    error "inner command failed: $self [1]: $r"
+                    return 1
+                }
+                P1[$k]="$v2"
+            fi
+        done
+    fi
 
     if [[ "$act" == [EFGLMRT] ]]; then
         c="\
@@ -1924,8 +2048,6 @@ xargs -r grep -hE '^$sha1$'"
         c+="${c:+|}
 xargs -r ${H:+-I '\$\$' }ssed -nRs '$s2'${H:+ '\$\$'}"
     fi
-
-    local k
 
     if [[ "$act" == [FLMR] ]]; then
         local s2='
@@ -2071,6 +2193,8 @@ xargs -r ${H:+-I '\$\$' }ssed -nRs '$s2'${H:+ '\$\$'}"
             { error(sprintf("line #%d: %s: \x27%s\x27", FNR, s, $0)) }
             function percents(t, v,	r)
             {
+                if (t == 0)
+                    return "-"
                 r = sprintf("%.0f", (t - v) / t * 100)
                 if (r == "-0")
                     r = "0"
@@ -2144,24 +2268,9 @@ ssed -R '1s/\x1//g'"
     fi
 
     if [[ "$act" == [FM] ]]; then
-        s2='
-            function round(x)
-            { return int(x + 0.5) }
-            function num(n,	i, q)
-            {
-                if (n !~ /^[0-9]+(\.[0-9]+)?$/)
-                    return n
-                n = round(n)
-                for (i = 4; i >= 0; i --) {
-                    q = n / (1024 ** i)
-                    if (int(q) > 0)
-                        break
-                }
-                return sprintf( \
-                    n > 0 && n % (1024 ** i) != 0 \
-                    ? "%.1f%s" : "%lu%s", \
-                    q, U[i])
-            }'
+        s2="$sn"'
+            function num_fmt(n)
+            { return (n ~ /^[0-9]+(\.[0-9]+)?$/) ? num(n) : n }'
         [ "$act" == "F" ] && s2+='
             function is_stat(n)
             { return match(n, /^('"${p// /|}"')$/) != 0 }'
@@ -2170,17 +2279,12 @@ ssed -R '1s/\x1//g'"
             { return match(n, /-mem$|^'"$perx"'$/) != 0 }
             BEGIN {
                 OFS = FS
-                U[0] = ""
-                U[1] = "K"
-                U[2] = "M"
-                U[3] = "G"
-                U[4] = "T"
             }'
         [ "$act" == "M" ] && s2+='
             function format_line()
             {
                 if (NF > 0 && is_mem($1))
-                    $2 = num($2)
+                    $2 = num_fmt($2)
             }'
         [ "$act" == "F" ] && s2+='
             function format_line(	i)
@@ -2194,7 +2298,7 @@ ssed -R '1s/\x1//g'"
                 else {
                     for (i = 1; i <= NF; i ++) {
                         if (M[i])
-                            $i = num($i)
+                            $i = num_fmt($i)
                     }
                 }
             }'
