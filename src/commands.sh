@@ -520,7 +520,7 @@ path-set-test()
                     echo -e "${nodl// /-set\\n}-set"
                     return 0
                 }
-                [[ "$OPTARG" =~ ^\+$|^$nodx$ ]] || {
+                [[ "$OPTARG" =~ ^\+$|^($nodx)$ ]] || {
                     error --long -i
                     return 1
                 }
@@ -1727,7 +1727,7 @@ path-set-test-grep()
                     echo -e "${stal// /\\n}"
                     return 0
                 }
-                [[ -n "$OPT" || "$OPTARG" =~ ^${stal// /|}(=$perx)?$ ]] || {
+                [[ -n "$OPT" || "$OPTARG" =~ ^(${stal// /|})(=$perx)?$ ]] || {
                     error -i
                     return 1
                 }
@@ -1742,8 +1742,8 @@ path-set-test-grep()
                     return 1
                 }
                 v="${P0[@]}"
-                [[ "${v// /|}" =~ ^${p// /|}${p:+(%*)}$ ]] &&
-                v="${BASH_REMATCH[1]}" ||
+                [[ "${v// /|}" =~ ^(${p// /|})${p:+(%*)}$ ]] &&
+                v="${BASH_REMATCH[2]}" ||
                 v=''
                 [ -n "$OPTN" ] && {
                     P0[${#P0[@]}]="${OPT:5}$v%"
