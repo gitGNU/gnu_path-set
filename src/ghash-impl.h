@@ -43,6 +43,7 @@
 #define GHASH_LOOKUP        GHASH_MAKE_NAME(lookup)
 #define GHASH_INSERT        GHASH_MAKE_NAME(insert)
 #define GHASH_IS_EMPTY      GHASH_MAKE_NAME(is_empty)
+#define GHASH_GET_STRUCT_MEM GHASH_MAKE_NAME(get_struct_mem)
 #define GHASH_PRINT_NODE    GHASH_MAKE_NAME(print_node)
 #define GHASH_PRINT         GHASH_MAKE_NAME(print)
 
@@ -213,6 +214,16 @@ static bool GHASH_IS_EMPTY(
 }
 
 #endif // GHASH_NEED_IS_EMPTY
+
+static size_t GHASH_GET_STRUCT_MEM(
+    const struct GHASH_TYPE* hash)
+{
+    size_t r = hash_get_struct_mem(hash->table);
+
+    SIZE_ADD_EQ(r, sizeof(struct GHASH_TYPE));
+
+    return r;
+}
 
 #define GHASH_PRINT_ONE(f, p)            \
     do {                                 \

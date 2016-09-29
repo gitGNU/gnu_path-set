@@ -64,6 +64,7 @@
 #define PATH_TRIE_LOOKUP        PATH_TRIE_MAKE_NAME(lookup)
 #define PATH_TRIE_INSERT        PATH_TRIE_MAKE_NAME(insert)
 #define PATH_TRIE_IS_EMPTY      PATH_TRIE_MAKE_NAME(is_empty)
+#define PATH_TRIE_GET_STRUCT_MEM PATH_TRIE_MAKE_NAME(get_struct_mem)
 #define PATH_TRIE_PRINT         PATH_TRIE_MAKE_NAME(print)
 
 #define PATH_TRIE_NODE_STACK_NAME \
@@ -94,6 +95,8 @@
 
 #define PATH_TRIE_ELEM_GET_NODE_SIZE \
                                 PATH_TRIE_MAKE_ELEM_NAME(get_node_size)
+#define PATH_TRIE_ELEM_GET_STRUCT_MEM \
+                                PATH_TRIE_MAKE_ELEM_NAME(get_struct_mem)
 
 #define PATH_TRIE_ELEM_PRINTER_TYPE \
                                 PATH_TRIE_MAKE_ELEM_NAME(printer_t)
@@ -645,6 +648,24 @@ static bool PATH_TRIE_IS_EMPTY(
     const struct PATH_TRIE_TYPE* trie)
 {
     return trie->root_node == PATH_TRIE_PTR_NULL;
+}
+
+static size_t PATH_TRIE_GET_STRUCT_MEM(
+    const struct PATH_TRIE_TYPE* trie)
+{
+    size_t r, e;
+
+#ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+    r = sizeof(struct PATH_TRIE_TYPE);
+#else
+    r = sizeof(struct PATH_TRIE_NODE_TYPE);
+    SIZE_MUL_EQ(r, trie->table.size);
+    SIZE_ADD_EQ(r, sizeof(struct PATH_TRIE_TYPE));
+#endif
+    e = PATH_TRIE_ELEM_GET_STRUCT_MEM(&trie->elem_set);
+    SIZE_ADD_EQ(r, e);
+
+    return r;
 }
 
 #ifdef PATH_TRIE_NEED_PRINT

@@ -60,6 +60,7 @@ struct hash_table
     size_t n_entries;
 
 #ifdef _GL_HASH_NEED_STATS_INFO
+    size_t n_alloc_entries;
     size_t n_duplicate_entries;
     size_t n_insert_not_equal_hits;
     size_t n_insert_equal_hits;
@@ -589,6 +590,7 @@ hash_initialize (size_t candidate, const Hash_tuning *tuning,
   table->n_entries = 0;
 
 #ifdef _GL_HASH_NEED_STATS_INFO
+  table->n_alloc_entries = 0;
   table->n_duplicate_entries = 0;
   table->n_insert_not_equal_hits = 0;
   table->n_insert_equal_hits = 0;
@@ -729,6 +731,10 @@ allocate_entry (Hash_table *table)
       new = obstack_alloc (&table->entry_stack, sizeof *new);
 #else
       new = malloc (sizeof *new);
+#ifdef _GL_HASH_NEED_STATS_INFO
+      if (new != NULL)
+        table->n_alloc_entries ++;
+#endif
 #endif
     }
 
@@ -1184,6 +1190,9 @@ hash_delete (Hash_table *table, const void *entry)
                       next = cursor->next;
                       free (cursor);
                       cursor = next;
+#ifdef _GL_HASH_NEED_STATS_INFO
+                      table->n_alloc_entries --;
+#endif
                     }
                   table->free_entry_list = NULL;
 #endif
@@ -1208,6 +1217,17 @@ hash_get_stats_info (const Hash_table *table, Hash_stats_info *info)
   info->insert_ne = table->n_insert_not_equal_hits;
   info->rehash_eq = table->n_rehash_equal_hits;
   info->rehash_ne = table->n_rehash_not_equal_hits;
+}
+
+size_t
+hash_get_struct_mem (const Hash_table *table)
+{
+  size_t r = table->n_buckets + table->n_alloc_entries;
+
+  r *= sizeof *table->bucket;
+  r += sizeof *table;
+
+  return r;
 }
 
 #endif /* _GL_HASH_NEED_STATS_INFO */

@@ -120,6 +120,7 @@ struct hash_stats_info
 typedef struct hash_stats_info Hash_stats_info;
 
 void hash_get_stats_info (const Hash_table *, Hash_stats_info *);
+size_t hash_get_struct_mem (const Hash_table *);
 
 #endif /* _GL_HASH_NEED_STATS_INFO */
 

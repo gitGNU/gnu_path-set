@@ -51,6 +51,7 @@
 #define TRIE_LOOKUP         TRIE_MAKE_NAME(lookup)
 #define TRIE_INSERT         TRIE_MAKE_NAME(insert)
 #define TRIE_IS_EMPTY       TRIE_MAKE_NAME(is_empty)
+#define TRIE_GET_STRUCT_MEM TRIE_MAKE_NAME(get_struct_mem)
 #define TRIE_PRINT          TRIE_MAKE_NAME(print)
 
 #define TRIE_STACK_NAME     TRIE_MAKE_NAME(node)
@@ -316,6 +317,12 @@ static bool TRIE_IS_EMPTY(
 }
 
 #endif // TRIE_NEED_IS_EMPTY
+
+static size_t TRIE_GET_STRUCT_MEM(
+    const struct TRIE_TYPE* trie UNUSED)
+{
+    return sizeof(struct TRIE_TYPE);
+}
 
 #if defined(TRIE_NEED_PRINT_ONE) || \
     defined(TRIE_NEED_PRINT)

@@ -172,6 +172,17 @@ static size_t trie_path_set_get_param_total_node_mem(
     return SIZE_ADD(n, e);
 }
 
+static size_t trie_path_set_get_param_total_mem(
+    const struct trie_path_set_t* set)
+{
+    size_t n, s;
+
+    n = trie_path_set_get_param_total_node_mem(set);
+    s = path_trie_get_struct_mem(&set->impl);
+
+    return SIZE_ADD(n, s);
+}
+
 #define FSIZE SET_STAT_PARAM_SIZE_FIELD
 #define FTIME SET_STAT_PARAM_TIME_FIELD
 #define SFUNC SET_STAT_PARAM_SIZE_FUNC
@@ -200,6 +211,7 @@ void trie_path_set_print_stats(
         SFUNC(node_mem,         trie_path_set_get_param_node_mem),
         SFUNC(elem_mem,         trie_path_set_get_param_elem_mem),
         SFUNC(total_node_mem,   trie_path_set_get_param_total_node_mem),
+        SFUNC(total_mem,        trie_path_set_get_param_total_mem),
         FTIME(insert_time,      stats.insert_time),
         //FTIME(lookup_time,      stats.lookup_time),
     };

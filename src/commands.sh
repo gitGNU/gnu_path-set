@@ -362,7 +362,7 @@ path-set-test()
     local opnx='@(plain-set|path-trie|ternary-tree|linear-hash|gnulib-hash)'
     local optx="@(${optl// /|})"
     # $ ssed -nR '/^CASE/!b;n;n;s/^\s*"//;s/"\s*,\s*$//;s/^[a-z0-9-]+?-time$/real-\0\nuser-\0\nsys-\0/;p' set-stats.def|ssed -nR 'H;$!b;g;s/^\n//;s/\n/ /g;p'
-    local stal='dups-line uniq-line line-mem dups-elem uniq-elem dups-node uniq-node elem-insert-eq elem-insert-lt elem-insert-gt elem-insert-ne elem-rehash-eq elem-rehash-ne node-insert-eq node-insert-lt node-insert-gt node-insert-ne node-rehash-eq node-rehash-ne hash-size hash-used hash-load elem-struct-size node-struct-size elem-struct node-struct elem-mem node-mem total-node-mem real-insert-time user-insert-time sys-insert-time real-lookup-time user-lookup-time sys-lookup-time'
+    local stal='dups-line uniq-line line-mem dups-elem uniq-elem dups-node uniq-node elem-insert-eq elem-insert-lt elem-insert-gt elem-insert-ne elem-rehash-eq elem-rehash-ne node-insert-eq node-insert-lt node-insert-gt node-insert-ne node-rehash-eq node-rehash-ne hash-size hash-used hash-load elem-struct-size node-struct-size elem-struct node-struct elem-mem node-mem total-node-mem total-mem real-insert-time user-insert-time sys-insert-time real-lookup-time user-lookup-time sys-lookup-time'
     local stax="@(${stal// /|})"
     local nodl='trie-plain trie-path lhash-plain lhash-path ghash-plain ghash-path'
     local nodx="${nodl// /-set|}-set"
@@ -1539,7 +1539,7 @@ path-set-test-grep()
     local tstl="$cfgl $base $opta $optn"
     local tstx="@(${tstl// /|})"
     # stev: $stal below is a duplicate of $stal in 'path-set-test' above
-    local stal='dups-line uniq-line line-mem dups-elem uniq-elem dups-node uniq-node elem-insert-eq elem-insert-lt elem-insert-gt elem-insert-ne elem-rehash-eq elem-rehash-ne node-insert-eq node-insert-lt node-insert-gt node-insert-ne node-rehash-eq node-rehash-ne hash-size hash-used hash-load elem-struct-size node-struct-size elem-struct node-struct elem-mem node-mem total-node-mem real-insert-time user-insert-time sys-insert-time real-lookup-time user-lookup-time sys-lookup-time'
+    local stal='dups-line uniq-line line-mem dups-elem uniq-elem dups-node uniq-node elem-insert-eq elem-insert-lt elem-insert-gt elem-insert-ne elem-rehash-eq elem-rehash-ne node-insert-eq node-insert-lt node-insert-gt node-insert-ne node-rehash-eq node-rehash-ne hash-size hash-used hash-load elem-struct-size node-struct-size elem-struct node-struct elem-mem node-mem total-node-mem total-mem real-insert-time user-insert-time sys-insert-time real-lookup-time user-lookup-time sys-lookup-time'
     local perx='[0-9]+(\.[0-9]+)?[kKmMgG]?'
     local stax="@(${stal// /|})"
     local meta='[][(){}^$|.?*+\\]'

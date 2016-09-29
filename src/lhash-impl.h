@@ -43,6 +43,7 @@
 #define LHASH_LOOKUP        LHASH_MAKE_NAME(lookup)
 #define LHASH_INSERT        LHASH_MAKE_NAME(insert)
 #define LHASH_IS_EMPTY      LHASH_MAKE_NAME(is_empty)
+#define LHASH_GET_STRUCT_MEM LHASH_MAKE_NAME(get_struct_mem)
 #define LHASH_PRINT         LHASH_MAKE_NAME(print)
 
 #ifdef LHASH_NEED_STATISTICS
@@ -323,6 +324,17 @@ static bool LHASH_IS_EMPTY(
 }
 
 #endif // LHASH_NEED_IS_EMPTY
+
+static size_t LHASH_GET_STRUCT_MEM(
+    const struct LHASH_TYPE* hash)
+{
+    size_t r = sizeof(struct LHASH_NODE_TYPE*);
+
+    SIZE_MUL_EQ(r, hash->size);
+    SIZE_ADD_EQ(r, sizeof(struct LHASH_TYPE));
+
+    return r;
+}
 
 #ifndef LHASH_NEED_32BIT_OFFSETS
 #define LHASH_PRINT_ONE(f, p)            \

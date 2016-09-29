@@ -188,6 +188,13 @@ CASE(size,
 "by the nodes in the main structure and in\n"
 "the path element structure if any"
 )
+CASE(size,
+ total_mem,
+"total-mem",
+"the total amount of bytes of memory consumed\n"
+"by the main structure and its path element\n"
+"structure if any"
+)
 CASE(clocks,
  insert_time,
 "insert-time",
