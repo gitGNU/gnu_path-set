@@ -308,7 +308,7 @@ is time to arrange this data into easily readable table formats:
   '/'         path-trie    ternary-tree           41.2M   -60%   -43%
   '/'         plain-set    ternary-tree           61.0M  -136%  -111%
   '/.-'       plain-set    ternary-tree           61.0M  -136%  -111%
-  
+
   # path-set-test-grep command #2:
   $ path-set-test-grep -Fe \
   --input=tests/files.txt --not --config-32bit --not --config-path-trie-32bit-offsets \
@@ -326,7 +326,7 @@ is time to arrange this data into easily readable table formats:
   '/'         path-trie    ternary-tree           82.4M  -219%  -158%
   '/'         plain-set    ternary-tree          121.9M  -373%  -281%
   '/.-'       plain-set    ternary-tree          121.9M  -373%  -281%
-  
+
   # path-set-test-grep command #3:
   $ path-set-test-grep -Fe \
   --input=tests/files.txt --not --config-32bit --config-path-trie-32bit-offsets \
@@ -344,7 +344,7 @@ is time to arrange this data into easily readable table formats:
   '/'         path-trie    ternary-tree           76.0M  -195%  -138%
   '/'         plain-set    ternary-tree          121.9M  -373%  -281%
   '/.-'       plain-set    ternary-tree          121.9M  -373%  -281%
-  
+
   # path-set-test-grep command #4:
   $ path-set-test-grep -Fe \
   --input=tests/files2.txt --config-32bit \
@@ -362,7 +362,7 @@ is time to arrange this data into easily readable table formats:
   '/'         path-trie    ternary-tree           81.4M   -75%   -54%
   '/'         plain-set    ternary-tree          136.1M  -192%  -157%
   '/.-'       plain-set    ternary-tree          136.1M  -192%  -157%
-  
+
   # path-set-test-grep command #5:
   $ path-set-test-grep -Fe \
   --input=tests/files2.txt --not --config-32bit --not --config-path-trie-32bit-offsets \
@@ -380,7 +380,7 @@ is time to arrange this data into easily readable table formats:
   '/'         path-trie    ternary-tree          162.9M  -250%  -175%
   '/'         plain-set    ternary-tree          272.3M  -484%  -359%
   '/.-'       plain-set    ternary-tree          272.3M  -484%  -359%
-  
+
   # path-set-test-grep command #6:
   $ path-set-test-grep -Fe \
   --input=tests/files2.txt --not --config-32bit --config-path-trie-32bit-offsets \
@@ -398,7 +398,7 @@ is time to arrange this data into easily readable table formats:
   '/'         path-trie    ternary-tree          149.7M  -221%  -153%
   '/'         plain-set    ternary-tree          272.3M  -484%  -359%
   '/.-'       plain-set    ternary-tree          272.3M  -484%  -359%
-  
+
 The meaning of 'total-node-mem' column of the tables above is described by the
 output of the following commands issued from within the 'src' directory:
 
