@@ -1198,7 +1198,7 @@ hash_delete (Hash_table *table, const void *entry)
 #ifdef _GL_HASH_NEED_STATS_INFO
 
 void
-hash_get_stats_info (Hash_table *table, Hash_stats_info *info)
+hash_get_stats_info (const Hash_table *table, Hash_stats_info *info)
 {
   info->size = table->n_buckets;
   info->used = table->n_buckets_used;
