@@ -1586,7 +1586,7 @@ path-set-test-grep()
     local H=''      # print out the test file name for each match (--[with-]filename)
     local n="="     # negate the next 'path-set-test' command line option (--not)
     local O=""      # define the named 'path-set-test' command line option (`-O?' prints out all names and exit) (--NAME|--NAME=VALUE)
-    local p=""      # account for the named 'path-set' stat parameter (cumulative); the value is of form NUM[.NUM][KMG] (`-p?' prints out all names and exit) (--stat-NAME|--stat-NAME=VALUE)
+    local p=""      # account for the named 'path-set' stat parameter (cumulative); the value is of form NUM[.NUM][KMG], or is equal to '+' in case NAME is of form '*-mem' (`-p?' prints out all names and exit) (--stat-NAME|--stat-NAME=VALUE)
     local t="+"     # filter for the output of commands of form 'path-set-test --run-test=NUM' -- when action is '-[FLMR]' (default: '1000000') (--[ran-]test=NUM)
     local V=""      # be verbose when action is '-[FLMR]' (--verbose)
 
