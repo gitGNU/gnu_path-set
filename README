@@ -734,7 +734,7 @@ or, otherwise, is the value '1000000', if this option was not specified.
 
 Furthermore, for each statistics parameter options of form `--stat-NAME=VALUE',
 where 'VALUE' is of form 'NUM[.NUM][KMG]', the output of 'path-set-test-grep'
-will also include a column named 'VALUE' to the left of the column named 'NAME'.
+will also include a column named 'VALUE' to the right of column named 'NAME'.
 On each line of output, the value on the column 'VALUE' is the percentage of
 *gain* relative to 'VALUE' of the corresponding value on the column 'NAME'.
 
