@@ -656,6 +656,7 @@ as follows:
         --NAME=VALUE          (`-O?' prints out all names and exit)
     -p:|--stat-NAME         account for the named 'path-set' stat parameter
         --stat-NAME=VALUE     (cumulative); the value is of form NUM[.NUM][KMG]
+                              or is equal to '+' in case NAME is of form '*-mem'
                               (`-p?' prints out all names and exit)
     -t|--[ran-]test=NUM     filter for the output of commands of form
                               'path-set-test --run-test=NUM' -- when action is
@@ -736,6 +737,32 @@ where 'VALUE' is of form 'NUM[.NUM][KMG]', the output of 'path-set-test-grep'
 will also include a column named 'VALUE' to the left of the column named 'NAME'.
 On each line of output, the value on the column 'VALUE' is the percentage of
 *gain* relative to 'VALUE' of the corresponding value on the column 'NAME'.
+
+For each statistics parameter options of form `--stat-NAME=+', the ouput of the
+shell function 'path-set-test-grep' will include two columns beside each column
+named 'NAME'. The names of these two columns are of form 'NUM[.NUM][KMG]'. The
+first name is the average value of the 'line-mem' stat parameter of 'path-set'
+relative to the same grepping criteria that the invoking commmand line defined.
+The second name is the average value of the 'NAME' stat parameter of 'path-set'
+relative to the grepping criteria that the invoking commmand line defined, but
+restricted to struct type `--plain-set' and set type `--gnulib-hash'. These two
+extra columns attached to column 'NAME' contains percentage values as described
+above for the case of statistics parameter options `--stat-NAME=VALUE', where
+'VALUE' is of form 'NUM[.NUM][KMG]'. Thus a command line like:
+
+  $ path-set-test-grep GREPPING_ACTION GREPPING_CRITERIA --stat-NAME=+
+
+will produce the same output as the command:
+
+  $ path-set-test-grep GREPPING_ACTION GREPPING_CRITERIA --stat-NAME={VALUE1,VALUE2}
+
+where 'VALUE1' is the average value on the column 'line-mem' of the output of:
+
+  $ path-set-test-grep -Re GREPPING_CRITERIA --stat-line-mem
+
+and 'VALUE2' is the average value on the column 'NAME' of the output of:
+
+  $ path-set-test-grep -Re GREPPING_CRITERIA --stat-NAME --plain-set --gnulib-hash
 
 As for the case of shell function 'path-set-test', appending the option `-d' to
 a 'path-set-test-grep' command line produces the text of the 'bash' script which
