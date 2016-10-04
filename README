@@ -721,6 +721,22 @@ The action options of 'path-set-test-grep' produce output as described below:
     options `-O|--NAME|--NAME=VALUE' present in the invoking command line.
   ==========================================================================
 
+If 'path-set-test-grep' is grepping test files -- i.e. when its action option
+is neither `-E|--grep-series' nor `-T|--grep-tests' -- and it was issued with
+a command line containing statistics parameter options of form `--stat-NAME'
+or `--stat-NAME=VALUE' (or the equivalents `-p NAME' or `-p NAME=VALUE'), then
+the shell function will include in its output a column named 'NAME', for each
+such parameter specified. The values produced on this column are those recorded
+in the input test file, on column 'avg' of the output produced by the command
+'path-set-test -t $NUM'. Here '$NUM' is the argument of option `-t|--ran-test'
+or, otherwise, is the value '1000000', if this option was not specified.
+
+Furthermore, for each statistics parameter options of form `--stat-NAME=VALUE',
+where 'VALUE' is of form 'NUM[.NUM][KMG]', the output of 'path-set-test-grep'
+will also include a column named 'VALUE' to the left of the column named 'NAME'.
+On each line of output, the value on the column 'VALUE' is the percentage of
+*gain* relative to 'VALUE' of the corresponding value on the column 'NAME'.
+
 As for the case of shell function 'path-set-test', appending the option `-d' to
 a 'path-set-test-grep' command line produces the text of the 'bash' script which
 gets generated and executed internally:
