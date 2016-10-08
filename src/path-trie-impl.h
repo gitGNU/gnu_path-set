@@ -53,8 +53,19 @@
 #define PATH_TRIE_DONE          PATH_TRIE_MAKE_NAME(done)
 
 #ifdef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
-#define PATH_TRIE_TABLE_TYPE    PATH_TRIE_MAKE_NAME(table_t)
-#define PATH_TRIE_ALLOC_NODE    PATH_TRIE_MAKE_NAME(alloc_node)
+#define PATH_TRIE_NODE_ALLOC_TYPE \
+                                PATH_TRIE_MAKE_NAME(node_alloc_t)
+#define PATH_TRIE_NODE_ALLOC_INIT \
+                                PATH_TRIE_MAKE_NAME(node_alloc_init)
+#define PATH_TRIE_NODE_ALLOC_DONE \
+                                PATH_TRIE_MAKE_NAME(node_alloc_done)
+#define PATH_TRIE_NODE_ALLOC_ALLOCATE \
+                                PATH_TRIE_MAKE_NAME(node_alloc_allocate)
+#define PATH_TRIE_NODE_ALLOC_GET_OBJ_COUNT \
+                                PATH_TRIE_MAKE_NAME(node_alloc_get_obj_count)
+#define PATH_TRIE_NODE_ALLOC_GET_STRUCT_MEM \
+                                PATH_TRIE_MAKE_NAME(node_alloc_get_struct_mem)
+
 #define PATH_TRIE_GET_NODE_COUNT PATH_TRIE_MAKE_NAME(get_node_count)
 #endif
 
@@ -185,29 +196,30 @@ SET_STATS_STRUCT_DECL(insert_lt, insert_gt)
 #endif
 
 #ifdef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
-struct PATH_TRIE_TABLE_TYPE
-{
-    struct PATH_TRIE_NODE_TYPE* ptr;
-    size_t                      size;
-    PATH_TRIE_PTR_TYPE          end;
-};
-#endif
+
+#define OBJ_ALLOC_NAME      PATH_TRIE_MAKE_NAME(node)
+#define OBJ_ALLOC_OBJ_SIZE  sizeof(struct PATH_TRIE_NODE_TYPE)
+#define OBJ_ALLOC_OBJ_ALIGN MEM_ALIGNOF(struct PATH_TRIE_NODE_TYPE)
+#define OBJ_ALLOC_NODE_BITS 0
+#include "obj-alloc-impl.h"
+
+#endif // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
 
 struct PATH_TRIE_TYPE
 {
-    struct PATH_TRIE_ELEM_TYPE  elem_set;
+    struct PATH_TRIE_ELEM_TYPE       elem_set;
 #ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
-    PATH_TRIE_ALLOC_OBJ_TYPE*   alloc_obj;
+    PATH_TRIE_ALLOC_OBJ_TYPE*        alloc_obj;
 #else
-    struct PATH_TRIE_TABLE_TYPE table;
+    struct PATH_TRIE_NODE_ALLOC_TYPE node_alloc;
 #endif
-    PATH_TRIE_PTR_TYPE          root_node;
+    PATH_TRIE_PTR_TYPE               root_node;
 
     const char* sep_set;
     size_t      sep_len;
 
 #ifdef PATH_TRIE_NEED_STATISTICS
-    struct PATH_TRIE_SET_STATS_TYPE stats;
+    struct PATH_TRIE_SET_STATS_TYPE  stats;
 #endif
 };
 
@@ -217,10 +229,7 @@ static void PATH_TRIE_INIT(
     const struct options_t* opt)
 {
 #ifdef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
-    const size_t n = sizeof(struct PATH_TRIE_NODE_TYPE);
-
-    if (opt->node_size >= UINT32_MAX ||
-        !SIZE_MUL_NO_OVERFLOW(n, opt->node_size))
+    if (opt->node_size >= UINT32_MAX)
         INVALID_ARG("%zu", opt->node_size);
 #endif
 
@@ -240,9 +249,10 @@ static void PATH_TRIE_INIT(
     STATIC(sizeof(struct PATH_TRIE_NODE_TYPE) == 16);
 #endif
 #endif
-    trie->table.size = opt->node_size;
-    trie->table.ptr = malloc(n * trie->table.size);
-    ENSURE(trie->table.ptr != NULL, "malloc failed");
+    PATH_TRIE_NODE_ALLOC_INIT(
+        &trie->node_alloc,
+        opt->node_size,
+        0);
 #endif
 
     trie->sep_set = opt->sep_set == NULL
@@ -255,55 +265,61 @@ static void PATH_TRIE_DONE(
     struct PATH_TRIE_TYPE* trie)
 {
 #ifdef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
-    free(trie->table.ptr);
+    PATH_TRIE_NODE_ALLOC_DONE(&trie->node_alloc);
 #endif
     PATH_TRIE_ELEM_DONE(&trie->elem_set);
 }
 
 #ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
 
+// stev: note that PATH_TRIE_NEW_NODE below has
+// an important side effect: it assigns to the
+// location pointed by 'p' the pointer value of
+// the node just created!
+
+// stev: when PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+// is defined, the side effect mentioned above
+// is more involved than the simple '*p = ...';
+// this is so due to the additional indirection
+// implied by PATH_TRIE_NEED_NODE_32BIT_OFFSETS:
+// the node pointers are offsets relative to the
+// tables of 'node_alloc' -- thus the assignment
+// of form '*PATH_TRIE_PTR2_DEREF(p) = ...'.
+
 // stev: we presume that the alloc function
 // return a pointer to a zeroed-out structure
 
-#define PATH_TRIE_NEW_NODE(e)             \
-    ({                                    \
-        struct PATH_TRIE_NODE_TYPE* __r = \
-            PATH_TRIE_ALLOC_NODE_FUNC(    \
-                trie->alloc_obj);         \
-        __r->elem = e;                    \
-        __r;                              \
+#define PATH_TRIE_NEW_NODE(e, p)            \
+    ({                                      \
+        struct PATH_TRIE_NODE_TYPE* __r =   \
+            *p = PATH_TRIE_ALLOC_NODE_FUNC( \
+                trie->alloc_obj);           \
+        __r->elem = e;                      \
+        __r;                                \
     })
 
 #else // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
 
-#define PATH_TRIE_NEW_NODE(e)         \
-    (                                 \
-        PATH_TRIE_ALLOC_NODE(trie, e) \
-    )
-
-static PATH_TRIE_PTR_TYPE PATH_TRIE_ALLOC_NODE(
-    struct PATH_TRIE_TYPE* trie,
-    PATH_TRIE_ELEM_NODE_TYPE_CONST elem)
-{
-    struct PATH_TRIE_NODE_TYPE* n;
-    PATH_TRIE_PTR_TYPE r;
-
-    ENSURE(trie->table.end < trie->table.size,
-        "node table overflow");
-
-    r = trie->table.end ++;
-    n = trie->table.ptr + r;
-
-    memset(n, 0, sizeof(*n));
-    n->elem = elem;
-
-    return r + 1;
-}
+#define PATH_TRIE_NEW_NODE(e, p)            \
+    ({                                      \
+        uint32_t __b = 0;                   \
+        struct PATH_TRIE_NODE_TYPE* __r =   \
+            PATH_TRIE_NODE_ALLOC_ALLOCATE(  \
+                &trie->node_alloc,          \
+                &__b);                      \
+        ENSURE(__r != NULL,                 \
+            "path trie node alloc failed"); \
+        ASSERT(__b > 0);                    \
+        *PATH_TRIE_PTR2_DEREF(p) = __b;     \
+        __r->elem = e;                      \
+        __r;                                \
+    })
 
 static size_t PATH_TRIE_GET_NODE_COUNT(
     const struct PATH_TRIE_TYPE* trie)
 {
-    return trie->table.end;
+    return PATH_TRIE_NODE_ALLOC_GET_OBJ_COUNT(
+        &trie->node_alloc);
 }
 
 #endif // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
@@ -526,12 +542,8 @@ static PATH_TRIE_ELEM_NODE_TYPE_CONST
 #ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
 #define PATH_TRIE_NODE(n) (n)
 #else // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
-#define PATH_TRIE_NODE_(t, p)            \
-    ({                                   \
-        ASSERT((p) <= (t)->table.end);   \
-        (p) ? (t)->table.ptr + ((p) - 1) \
-            : NULL;                      \
-    })
+#define PATH_TRIE_NODE_(t, p) \
+    OBJ_ALLOC_DEREF(&(t)->node_alloc, p)
 #define PATH_TRIE_NODE(p) \
     PATH_TRIE_NODE_(trie, p)
 #endif // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
@@ -545,11 +557,12 @@ static bool PATH_TRIE_LOOKUP(
 {
     PATH_TRIE_ELEM_NODE_TYPE_CONST elem;
     struct PATH_TRIE_NODE_TYPE* node;
+    PATH_TRIE_PTR_TYPE ptr;
     bool next = true;
 
+    ptr = trie->root_node;
     elem = PATH_TRIE_ELEM_NULL;
-    node = PATH_TRIE_NODE(trie->root_node);
-    while (node) {
+    while ((node = PATH_TRIE_NODE(ptr))) {
         if (next) {
             elem = PATH_TRIE_GET_ELEM(
                 trie, &key, &len);
@@ -560,14 +573,14 @@ static bool PATH_TRIE_LOOKUP(
                 *result = node;
                 return true;
             }
-            node = PATH_TRIE_NODE(node->eq);
+            ptr = node->eq;
             next = true;
         }
         else
         if (PATH_TRIE_PTR_LT(elem, node->elem))
-            node = PATH_TRIE_NODE(node->lo);
+            ptr = node->lo;
         else
-            node = PATH_TRIE_NODE(node->hi);
+            ptr = node->hi;
     }
 
     *result = NULL;
@@ -581,14 +594,80 @@ static bool PATH_TRIE_INSERT(
     const char* key, size_t len,
     struct PATH_TRIE_NODE_TYPE** result)
 {
+#ifdef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+#undef  CASE
+#define CASE(m) (size_t) offsetof( \
+    struct PATH_TRIE_NODE_TYPE, m)
+    struct ptr2_t
+    {
+        enum {
+            link_self = SZ(0),
+            link_lo = CASE(lo),
+            link_hi = CASE(hi),
+            link_eq = CASE(eq)
+        } link;
+        PATH_TRIE_PTR_TYPE* self;
+        PATH_TRIE_PTR_TYPE  base;
+    };
+#define PATH_TRIE_ROOT_TO_PTR2()       \
+    ({                                 \
+        struct ptr2_t __r = {          \
+            .link = link_self,         \
+            .self = &trie->root_node,  \
+            .base = PATH_TRIE_PTR_NULL \
+        };                             \
+        __r;                           \
+    })
+#define PATH_TRIE_LINK_TO_PTR2(l) \
+    ({                            \
+        struct ptr2_t __r = {     \
+            .link = link_ ## l,   \
+            .self = NULL,         \
+            .base = *ptr.self     \
+        };                        \
+        __r;                      \
+    })
+#define PATH_TRIE_PTR2_DEREF(p)             \
+    ({                                      \
+        if (p.link != link_self)            \
+            p.self = (PATH_TRIE_PTR_TYPE*)  \
+                (((char*)                   \
+                  (PATH_TRIE_NODE(p.base))) \
+                    + p.link);              \
+        p.self;                             \
+    })
+#define PATH_TRIE_PTR2_DEREF_NODE() \
+    ({                              \
+        (void)                      \
+        PATH_TRIE_PTR2_DEREF(ptr);  \
+        ASSERT(ptr.self != NULL);   \
+        PATH_TRIE_NODE(*ptr.self);  \
+    })
+#else // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+#define PATH_TRIE_ROOT_TO_PTR2()    (&trie->root_node)
+#define PATH_TRIE_LINK_TO_PTR2(l)   (&node->l)
+#define PATH_TRIE_PTR2_DEREF_NODE() (*(ptr))
+#endif // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+
     PATH_TRIE_ELEM_NODE_TYPE_CONST elem;
     struct PATH_TRIE_NODE_TYPE* node;
+#ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
     PATH_TRIE_PTR_TYPE* ptr;
+#else
+    struct ptr2_t ptr;
+#endif
     bool next = true;
 
+#ifdef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+    STATIC(
+        link_self < link_lo &&
+        link_lo < link_hi &&
+        link_hi < link_eq);
+#endif
+
     elem = PATH_TRIE_ELEM_NULL;
-    ptr = &trie->root_node;
-    while ((node = PATH_TRIE_NODE(*ptr))) {
+    ptr = PATH_TRIE_ROOT_TO_PTR2();
+    while ((node = PATH_TRIE_PTR2_DEREF_NODE())) {
         if (next) {
             elem = PATH_TRIE_PUT_ELEM(
                 trie, &key, &len);
@@ -605,7 +684,7 @@ static bool PATH_TRIE_INSERT(
                 *result = node;
                 return false;
             }
-            ptr = &node->eq;
+            ptr = PATH_TRIE_LINK_TO_PTR2(eq);
             next = true;
         }
         else
@@ -614,13 +693,13 @@ static bool PATH_TRIE_INSERT(
 #ifdef PATH_TRIE_NEED_STATISTICS
             trie->stats.insert_lt ++;
 #endif
-            ptr = &node->lo;
+            ptr = PATH_TRIE_LINK_TO_PTR2(lo);
         }
         else {
 #ifdef PATH_TRIE_NEED_STATISTICS
             trie->stats.insert_gt ++;
 #endif
-            ptr = &node->hi;
+            ptr = PATH_TRIE_LINK_TO_PTR2(hi);
         }
     }
 
@@ -628,12 +707,15 @@ static bool PATH_TRIE_INSERT(
         if (next)
             elem = PATH_TRIE_PUT_ELEM(
                 trie, &key, &len);
-        *ptr = PATH_TRIE_NEW_NODE(elem);
-        node = PATH_TRIE_NODE(*ptr);
-
+        node = PATH_TRIE_NEW_NODE(
+            elem, ptr);
+#if 0
+        // stev: the primary invariant of this loop:
+        ASSERT(PATH_TRIE_NODE(*ptr.self) == node);
+#endif
         if (elem == PATH_TRIE_ELEM_NULL)
             break;
-        ptr = &node->eq;
+        ptr = PATH_TRIE_LINK_TO_PTR2(eq);
         next = true;
     }
 
@@ -642,6 +724,10 @@ static bool PATH_TRIE_INSERT(
 #endif
     *result = node;
     return true;
+#undef PATH_TRIE_ROOT_TO_PTR2
+#undef PATH_TRIE_LINK_TO_PTR2
+#undef PATH_TRIE_PTR2_DEREF_NODE
+#undef PATH_TRIE_PTR2_DEREF
 }
 
 static bool PATH_TRIE_IS_EMPTY(
@@ -658,8 +744,7 @@ static size_t PATH_TRIE_GET_STRUCT_MEM(
 #ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
     r = sizeof(struct PATH_TRIE_TYPE);
 #else
-    r = sizeof(struct PATH_TRIE_NODE_TYPE);
-    SIZE_MUL_EQ(r, trie->table.size);
+    r = PATH_TRIE_NODE_ALLOC_GET_STRUCT_MEM(&trie->node_alloc);
     SIZE_ADD_EQ(r, sizeof(struct PATH_TRIE_TYPE));
 #endif
     e = PATH_TRIE_ELEM_GET_STRUCT_MEM(&trie->elem_set);
@@ -741,7 +826,7 @@ static void PATH_TRIE_PRINTER_PRINT(
     struct PATH_TRIE_PRINTER_TYPE* prt,
     const struct PATH_TRIE_NODE_TYPE* node)
 {
-    if (PATH_TRIE_NODE(node->lo) != NULL)
+    if (node->lo != PATH_TRIE_PTR_NULL)
         PATH_TRIE_PRINTER_PRINT(
             prt, PATH_TRIE_NODE(node->lo));
 
@@ -766,7 +851,7 @@ static void PATH_TRIE_PRINTER_PRINT(
         fputc('\n', prt->file);
     }
     else
-    if (PATH_TRIE_NODE(node->eq) != NULL) {
+    if (node->eq != PATH_TRIE_PTR_NULL) {
         PATH_TRIE_NODE_STACK_PUSH(
             node->elem);
 
@@ -776,7 +861,7 @@ static void PATH_TRIE_PRINTER_PRINT(
         PATH_TRIE_NODE_STACK_POP();
     }
 
-    if (PATH_TRIE_NODE(node->hi) != NULL)
+    if (node->hi != PATH_TRIE_PTR_NULL)
         PATH_TRIE_PRINTER_PRINT(
             prt, PATH_TRIE_NODE(node->hi));
 }
