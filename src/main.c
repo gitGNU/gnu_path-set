@@ -24,7 +24,7 @@
 #include "set-intf.h"
 
 const char program[] = STRINGIFY(PROGRAM);
-const char verdate[] = "0.6 -- 2016-08-19 09:20"; // $ date +'%F %R'
+const char verdate[] = "0.7 -- 2016-10-08 16:06"; // $ date +'%F %R'
 
 const char license[] =
 "Copyright (C) 2016  Stefan Vargyas.\n"
