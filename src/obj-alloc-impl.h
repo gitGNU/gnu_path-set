@@ -217,11 +217,11 @@ static void* OBJ_ALLOC_ALLOCATE(
 #else
         a = PTR_ALIGN_SIZE(p->base + p->used, align);
 
-        SIZE_ADD_NO_OVERFLOW(p->used, a);
+        ASSERT_SIZE_ADD_NO_OVERFLOW(p->used, a);
         if (p->used + a >= OBJ_ALLOC_OFFSET_MAX)
             continue;
 
-        SIZE_ADD_NO_OVERFLOW(size, a);
+        ASSERT_SIZE_ADD_NO_OVERFLOW(size, a);
         if (p->size - p->used >= size + a ||
             p->size < alloc->max_size)
             break;
