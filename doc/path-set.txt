@@ -581,7 +581,7 @@ form of 64-bit pointers.
 The commands below show the 'struct' definitions for all the node types of the
 'path-set' configurations used in section 1.
 
-  $ shopt +o extglob
+  $ shopt -s extglob
 
   $ cd src && . commands.sh
 
