@@ -317,7 +317,7 @@ If building 'path-set' with 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' defined, then
 the help info would include an extra `-n|--node-size' command line option:
 
   $ ./path-set --help|grep -e --node-size
-    -n|--node-size NUM[KM]   the path trie table fixed size (default 1K)
+    -n|--node-size NUM[KM]   the path trie table initial size (default 1K)
 
 The command line option `-n|--node-size' defines the size of the table used for
 allocating contiguously path element nodes in the 'path-trie' structure. This
