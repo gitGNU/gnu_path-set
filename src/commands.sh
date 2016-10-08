@@ -1067,6 +1067,7 @@ OPT=4"
         [ "$act" == 'D' ] && s3+='
             /^struct\s+path_trie_node_t\s*$/b1
             /^struct\s+[a-z0-9_]+_node_t\s*$/!b
+            /_alloc_node_t\s*$/b
             x
             /^$/!p
             x
