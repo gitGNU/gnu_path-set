@@ -88,6 +88,7 @@ SET_STATS_STRUCT_DECL(
 
 #define SET_IMPL_NAME path_trie
 #define SET_PATH_TRIE_ELEM_NODE_TYPE lhash_node_t
+#define SET_NEED_POOL_ALLOC
 #define SET_NEED_PRINT_SET
 #include "set-impl.h"
 

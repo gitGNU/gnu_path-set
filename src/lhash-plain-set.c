@@ -59,6 +59,7 @@ SET_STATS_STRUCT_DECL(
 #include "set-decl.h"
 
 #define SET_IMPL_NAME plain_lhash
+#define SET_NEED_POOL_ALLOC
 #define SET_NEED_PRINT_SET
 #include "set-impl.h"
 

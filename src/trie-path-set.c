@@ -90,6 +90,7 @@ SET_STATS_STRUCT_DECL(
 #define SET_IMPL_NAME path_trie
 #define SET_PATH_TRIE_ELEM_NODE_TYPE trie_node_t
 
+#define SET_NEED_POOL_ALLOC
 #ifdef  CONFIG_TRIE_PATH_SET_PRINT_SET
 #define SET_NEED_PRINT_SET
 #else

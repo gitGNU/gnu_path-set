@@ -62,7 +62,9 @@
 
 struct SET_TYPE
 {
+#ifdef SET_NEED_POOL_ALLOC
     struct pool_alloc_t  pool;
+#endif
     struct SET_IMPL_TYPE impl;
     struct set_stats_t   stats;
 };
@@ -113,7 +115,9 @@ struct SET_TYPE* SET_CREATE(
     ENSURE(r != NULL, "malloc failed");
     memset(r, 0, n);
 
+#ifdef SET_NEED_POOL_ALLOC
     pool_alloc_init(&r->pool, opt->pool_size);
+#endif
     SET_IMPL_INIT(&r->impl, r, opt);
 
     return r;
@@ -123,7 +127,9 @@ void SET_DESTROY(
     struct SET_TYPE* set)
 {
     SET_IMPL_DONE(&set->impl);
+#ifdef SET_NEED_POOL_ALLOC
     pool_alloc_done(&set->pool);
+#endif
 }
 
 #if 0
