@@ -71,12 +71,13 @@ struct SET_TYPE
 
 #define SET_ALLOCATE_STRUCT(n, t)        \
     ({                                   \
+        size_t __n = sizeof(struct t);   \
         void* __r = pool_alloc_allocate( \
-            &set->pool,                  \
-            sizeof(struct t),            \
+            &set->pool, __n,             \
             MEM_ALIGNOF(struct t));      \
         ENSURE(__r != NULL,              \
             "pool alloc failed");        \
+        memset(__r, 0, __n);             \
         set->stats.n ## _struct ++;      \
         __r;                             \
     })
@@ -85,10 +86,11 @@ struct SET_TYPE
         size_t __n = sizeof(struct t);   \
         void* __r = pool_alloc_allocate( \
             &set->pool,                  \
-            SIZE_ADD_EQ(__n, l),         \
+            SIZE_ADD(__n, l),            \
             MEM_ALIGNOF(struct t));      \
         ENSURE(__r != NULL,              \
             "pool alloc failed");        \
+        memset(__r, 0, __n);             \
         set->stats.n ## _struct ++;      \
         set->stats.n ## _mem += l;       \
         __r;                             \
