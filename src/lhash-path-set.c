@@ -66,6 +66,7 @@ static struct lhash_node_t* lhash_path_set_new_elem(
 #ifdef  CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
 #define PATH_TRIE_NEED_ELEM_32BIT_OFFSETS
 #endif
+#define PATH_TRIE_NEED_ELEM_OBJ_ALLOC
 #define PATH_TRIE_NEED_STATISTICS
 #define PATH_TRIE_NEED_PRINT
 #include "path-trie-impl.h"

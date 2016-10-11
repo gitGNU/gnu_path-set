@@ -27,13 +27,23 @@
 #error  PATH_TRIE_DEFAULT_SEP is not defined
 #endif
 
+#ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+
 #ifndef PATH_TRIE_ALLOC_NODE_FUNC
 #error  PATH_TRIE_ALLOC_NODE_FUNC is not defined
 #endif
 
+#endif // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+
+#if !defined(PATH_TRIE_NEED_NODE_32BIT_OFFSETS) || \
+     defined(PATH_TRIE_NEED_ELEM_OBJ_ALLOC)
+
 #ifndef PATH_TRIE_ALLOC_OBJ_TYPE
 #error  PATH_TRIE_ALLOC_OBJ_TYPE is not defined
 #endif
+
+#endif // !defined(PATH_TRIE_NEED_NODE_32BIT_OFFSETS) ||
+       // !defined(PATH_TRIE_NEED_ELEM_OBJ_ALLOC)
 
 #ifdef  PATH_TRIE_NAME
 #define PATH_TRIE_MAKE_NAME__(n, s) n ## _path_trie ## s
@@ -225,7 +235,10 @@ struct PATH_TRIE_TYPE
 
 static void PATH_TRIE_INIT(
     struct PATH_TRIE_TYPE* trie,
+#if !defined(PATH_TRIE_NEED_NODE_32BIT_OFFSETS) || \
+     defined(PATH_TRIE_NEED_ELEM_OBJ_ALLOC)
     PATH_TRIE_ALLOC_OBJ_TYPE* alloc_obj,
+#endif
     const struct options_t* opt)
 {
 #ifdef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
@@ -237,7 +250,9 @@ static void PATH_TRIE_INIT(
 
     PATH_TRIE_ELEM_INIT(
         &trie->elem_set,
+#ifdef PATH_TRIE_NEED_ELEM_OBJ_ALLOC
         alloc_obj,
+#endif
         opt);
 #ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
     trie->alloc_obj = alloc_obj;

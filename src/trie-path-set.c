@@ -64,6 +64,7 @@ static struct trie_node_t* trie_path_set_new_elem(
 #ifdef  CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
 #define PATH_TRIE_NEED_NODE_32BIT_OFFSETS
 #endif
+#define PATH_TRIE_NEED_ELEM_OBJ_ALLOC
 #define PATH_TRIE_NEED_STATISTICS
 #ifdef  CONFIG_TRIE_PATH_SET_PRINT_SET
 #define PATH_TRIE_NEED_PRINT
