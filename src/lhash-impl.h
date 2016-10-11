@@ -176,7 +176,7 @@ static void LHASH_INIT(
 
     hash->alloc_obj = alloc_obj;
     hash->table = calloc(
-        sizeof(struct LHASH_NODE_TYPE*), s);
+        s, sizeof(struct LHASH_NODE_TYPE*));
     ENSURE(hash->table != NULL, "calloc failed");
 
     hash->size = s;
