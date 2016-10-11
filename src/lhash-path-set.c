@@ -138,10 +138,10 @@ static struct size_frac_t
 static size_t lhash_path_set_get_param_node_struct(
     const struct lhash_path_set_t* set)
 {
-#ifndef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
-    return set->stats.node_struct;
+#ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
+    return set->impl.stats.node_struct;
 #else
-    return path_trie_get_node_count(&set->impl);
+    return set->stats.node_struct;
 #endif
 }
 

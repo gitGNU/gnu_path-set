@@ -71,13 +71,9 @@
                                 PATH_TRIE_MAKE_NAME(node_alloc_done)
 #define PATH_TRIE_NODE_ALLOC_ALLOCATE \
                                 PATH_TRIE_MAKE_NAME(node_alloc_allocate)
-#define PATH_TRIE_NODE_ALLOC_GET_OBJ_COUNT \
-                                PATH_TRIE_MAKE_NAME(node_alloc_get_obj_count)
 #define PATH_TRIE_NODE_ALLOC_GET_STRUCT_MEM \
                                 PATH_TRIE_MAKE_NAME(node_alloc_get_struct_mem)
-
-#define PATH_TRIE_GET_NODE_COUNT PATH_TRIE_MAKE_NAME(get_node_count)
-#endif
+#endif // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
 
 #define PATH_TRIE_SPLIT         PATH_TRIE_MAKE_NAME(split)
 #define PATH_TRIE_GET_ELEM      PATH_TRIE_MAKE_NAME(get_elem)
@@ -202,11 +198,17 @@ struct PATH_TRIE_NODE_TYPE
 };
 
 #ifdef PATH_TRIE_NEED_STATISTICS
-SET_STATS_STRUCT_DECL(insert_lt, insert_gt)
+SET_STATS_STRUCT_DECL(
+    insert_lt, insert_gt
+#ifdef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+    , node_struct
+#endif
+)
 #endif
 
 #ifdef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
 
+#undef  OBJ_ALLOC_NAME
 #define OBJ_ALLOC_NAME      PATH_TRIE_MAKE_NAME(node)
 #define OBJ_ALLOC_OBJ_SIZE  sizeof(struct PATH_TRIE_NODE_TYPE)
 #define OBJ_ALLOC_OBJ_ALIGN MEM_ALIGNOF(struct PATH_TRIE_NODE_TYPE)
@@ -325,17 +327,11 @@ static void PATH_TRIE_DONE(
         ENSURE(__r != NULL,                 \
             "path trie node alloc failed"); \
         ASSERT(__b > 0);                    \
+        trie->stats.node_struct ++;         \
         *PATH_TRIE_PTR2_DEREF(p) = __b;     \
         __r->elem = e;                      \
         __r;                                \
     })
-
-static size_t PATH_TRIE_GET_NODE_COUNT(
-    const struct PATH_TRIE_TYPE* trie)
-{
-    return PATH_TRIE_NODE_ALLOC_GET_OBJ_COUNT(
-        &trie->node_alloc);
-}
 
 #endif // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
 

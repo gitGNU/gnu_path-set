@@ -406,6 +406,10 @@ static void* OBJ_ALLOC_ALLOCATE(
     })
 #endif // OBJ_ALLOC_NODE_BITS == 0
 
+#if defined(OBJ_ALLOC_OBJ_SIZE) && \
+    defined(OBJ_ALLOC_NEED_GET_OBJ_COUNT) || \
+    !defined(OBJ_ALLOC_OBJ_SIZE) && \
+    defined(OBJ_ALLOC_NEED_GET_OBJ_MEM)
 
 static size_t
 #ifdef OBJ_ALLOC_OBJ_SIZE
@@ -429,6 +433,11 @@ static size_t
 
     return r;
 }
+
+#endif // defined(OBJ_ALLOC_OBJ_SIZE) &&
+       // defined(OBJ_ALLOC_NEED_GET_OBJ_COUNT) ||
+       // !defined(OBJ_ALLOC_OBJ_SIZE) &&
+       // defined(OBJ_ALLOC_NEED_GET_OBJ_MEM)
 
 static size_t
     OBJ_ALLOC_GET_STRUCT_MEM(
