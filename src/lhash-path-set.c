@@ -37,12 +37,16 @@ struct lhash_path_set_t;
 static struct path_trie_node_t* lhash_path_set_new_node(
     struct lhash_path_set_t* set);
 #endif
+#ifndef  CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
 static struct lhash_node_t* lhash_path_set_new_elem(
     struct lhash_path_set_t* set, size_t len);
+#endif
 
 #undef  LHASH_NAME
+#ifndef  CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
 #define LHASH_ALLOC_NODE_FUNC lhash_path_set_new_elem
 #define LHASH_ALLOC_OBJ_TYPE  struct lhash_path_set_t
+#endif
 
 #ifdef  CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
 #define LHASH_NEED_32BIT_OFFSETS
@@ -55,18 +59,28 @@ static struct lhash_node_t* lhash_path_set_new_elem(
 #undef  PATH_TRIE_NAME
 #define PATH_TRIE_VAL_TYPE        SET_VALUE_TYPE
 #define PATH_TRIE_ELEM_NAME       lhash
+#ifndef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
 #define PATH_TRIE_ALLOC_NODE_FUNC lhash_path_set_new_node
+#endif
+#if !defined(CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS) || \
+    !defined(CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS)
 #define PATH_TRIE_ALLOC_OBJ_TYPE  struct lhash_path_set_t
+#endif
 #define PATH_TRIE_DEFAULT_SEP     path_trie_default_sep
+#ifndef CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
 #define PATH_TRIE_ELEM_PRINT_ONE  LHASH_PRINT_ONE
+#else
+#define PATH_TRIE_ELEM_PRINT_ONE  lhash_print_one
+#endif
 
 #ifdef  CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
 #define PATH_TRIE_NEED_NODE_32BIT_OFFSETS
 #endif
 #ifdef  CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
 #define PATH_TRIE_NEED_ELEM_32BIT_OFFSETS
-#endif
+#else // CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
 #define PATH_TRIE_NEED_ELEM_OBJ_ALLOC
+#endif
 #define PATH_TRIE_NEED_STATISTICS
 #define PATH_TRIE_NEED_PRINT
 #include "path-trie-impl.h"
@@ -79,17 +93,27 @@ static struct lhash_node_t* lhash_path_set_new_elem(
 
 SET_STATS_STRUCT_DECL(
 #ifndef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
-    node_struct,
+    node_struct
 #endif
+#if !defined(CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS) && \
+    !defined(CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS)
+    ,
+#endif
+#ifndef CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
     elem_struct,
-    elem_mem)
+    elem_mem
+#endif
+)
 
 #define SET_NAME lhash_path
 #include "set-decl.h"
 
 #define SET_IMPL_NAME path_trie
 #define SET_PATH_TRIE_ELEM_NODE_TYPE lhash_node_t
+#if !defined(CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS) || \
+    !defined(CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS)
 #define SET_NEED_POOL_ALLOC
+#endif
 #define SET_NEED_PRINT_SET
 #include "set-impl.h"
 
@@ -103,6 +127,7 @@ static struct path_trie_node_t*
 }
 #endif
 
+#ifndef  CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
 static struct lhash_node_t*
     lhash_path_set_new_elem(
         struct lhash_path_set_t* set,
@@ -112,6 +137,7 @@ static struct lhash_node_t*
         elem, lhash_node_t,
         len);
 }
+#endif
 
 void lhash_path_set_print_elems(
     const struct lhash_path_set_t* set,
@@ -154,16 +180,30 @@ static size_t lhash_path_set_get_param_node_mem(
     return SIZE_MUL(n, sizeof(struct path_trie_node_t));
 }
 
+static size_t lhash_path_set_get_param_elem_struct(
+    const struct lhash_path_set_t* set)
+{
+#ifdef CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
+    return set->impl.elem_set.stats.node_struct;
+#else
+    return set->stats.elem_struct;
+#endif
+}
+
 static size_t lhash_path_set_get_param_elem_mem(
     const struct lhash_path_set_t* set)
 {
     size_t n;
 
-    n = SIZE_MUL(
-        set->stats.elem_struct,
-        sizeof(struct lhash_node_t));
+    n = lhash_path_set_get_param_elem_struct(set);
+    SIZE_MUL_EQ(n, sizeof(struct lhash_node_t));
 
-    return SIZE_ADD(n, set->stats.elem_mem);
+    return SIZE_ADD(n,
+#ifdef CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
+        set->impl.elem_set.stats.node_mem);
+#else
+        set->stats.elem_mem);
+#endif
 }
 
 static size_t lhash_path_set_get_param_total_node_mem(
@@ -215,7 +255,7 @@ void lhash_path_set_print_stats(
         SFUNC(node_struct_size, lhash_path_set_get_node_size),
         SFUNC(elem_struct_size, lhash_path_set_get_elem_size),
         SFUNC(node_struct,      lhash_path_set_get_param_node_struct),
-        FSIZE(elem_struct,      stats.elem_struct),
+        SFUNC(elem_struct,      lhash_path_set_get_param_elem_struct),
         SFUNC(node_mem,         lhash_path_set_get_param_node_mem),
         SFUNC(elem_mem,         lhash_path_set_get_param_elem_mem),
         SFUNC(total_node_mem,   lhash_path_set_get_param_total_node_mem),

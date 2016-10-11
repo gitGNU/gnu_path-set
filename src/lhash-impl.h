@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Path-Set.  If not, see <http://www.gnu.org/licenses/>.
 
+#ifndef LHASH_NEED_32BIT_OFFSETS
+
 #ifndef LHASH_ALLOC_NODE_FUNC
 #error  LHASH_ALLOC_NODE_FUNC is not defined
 #endif
@@ -22,6 +24,8 @@
 #ifndef LHASH_ALLOC_OBJ_TYPE
 #error  LHASH_ALLOC_OBJ_TYPE is not defined
 #endif
+
+#endif // LHASH_NEED_32BIT_OFFSETS
 
 #ifdef  LHASH_NAME
 #define LHASH_MAKE_NAME__(n, s) n ## _lhash ## s
@@ -40,11 +44,30 @@
 #define LHASH_INIT          LHASH_MAKE_NAME(init)
 #define LHASH_DONE          LHASH_MAKE_NAME(done)
 
+#ifdef LHASH_NEED_32BIT_OFFSETS
+#define LHASH_NODE_ALLOC_TYPE \
+                            LHASH_MAKE_NAME(node_alloc_t)
+#define LHASH_NODE_ALLOC_INIT \
+                            LHASH_MAKE_NAME(node_alloc_init)
+#define LHASH_NODE_ALLOC_DONE \
+                            LHASH_MAKE_NAME(node_alloc_done)
+#define LHASH_NODE_ALLOC_ALLOCATE \
+                            LHASH_MAKE_NAME(node_alloc_allocate)
+#define LHASH_NODE_ALLOC_GET_OBJ_MEM \
+                            LHASH_MAKE_NAME(node_alloc_get_obj_mem)
+#define LHASH_NODE_ALLOC_GET_STRUCT_MEM \
+                            LHASH_MAKE_NAME(node_alloc_get_struct_mem)
+#endif // LHASH_NEED_32BIT_OFFSETS
+
 #define LHASH_LOOKUP        LHASH_MAKE_NAME(lookup)
 #define LHASH_INSERT        LHASH_MAKE_NAME(insert)
 #define LHASH_IS_EMPTY      LHASH_MAKE_NAME(is_empty)
 #define LHASH_GET_STRUCT_MEM LHASH_MAKE_NAME(get_struct_mem)
 #define LHASH_PRINT         LHASH_MAKE_NAME(print)
+
+#ifdef LHASH_NEED_32BIT_OFFSETS
+#define LHASH_PRINT_ONE     LHASH_MAKE_NAME(print_one)
+#endif
 
 #ifdef LHASH_NEED_STATISTICS
 
@@ -61,6 +84,16 @@
 
 #endif // LHASH_NEED_STATISTICS
 
+#ifndef LHASH_NEED_32BIT_OFFSETS
+#define LHASH_PTR_TYPE struct LHASH_NODE_TYPE*
+#define LHASH_PTR_TYPE_CONST const LHASH_PTR_TYPE
+#define LHASH_PTR_NULL NULL
+#else
+#define LHASH_PTR_TYPE uint32_t
+#define LHASH_PTR_TYPE_CONST LHASH_PTR_TYPE
+#define LHASH_PTR_NULL 0
+#endif
+
 struct LHASH_NODE_TYPE
 {
 #ifdef LHASH_VAL_TYPE
@@ -73,13 +106,34 @@ struct LHASH_NODE_TYPE
 };
 
 #ifdef LHASH_NEED_STATISTICS
-SET_STATS_STRUCT_DECL(insert_ne)
+SET_STATS_STRUCT_DECL(
+    insert_ne
+#ifdef LHASH_NEED_32BIT_OFFSETS
+    ,
+    node_struct,
+    node_mem
 #endif
+)
+#endif // LHASH_NEED_STATISTICS
+
+#ifdef LHASH_NEED_32BIT_OFFSETS
+
+#define OBJ_ALLOC_NAME      LHASH_MAKE_NAME(node)
+#undef  OBJ_ALLOC_OBJ_SIZE
+#undef  OBJ_ALLOC_OBJ_ALIGN
+#define OBJ_ALLOC_NODE_BITS 0
+#include "obj-alloc-impl.h"
+
+#endif // LHASH_NEED_32BIT_OFFSETS
 
 struct LHASH_TYPE
 {
+#ifndef LHASH_NEED_32BIT_OFFSETS
     LHASH_ALLOC_OBJ_TYPE* alloc_obj;
-    struct LHASH_NODE_TYPE** table;
+#else
+    struct LHASH_NODE_ALLOC_TYPE node_alloc;
+#endif
+    LHASH_PTR_TYPE* table;
     size_t size;
     size_t used;
 
@@ -91,6 +145,7 @@ struct LHASH_TYPE
 // stev: we presume that the alloc function
 // return a pointer to a zeroed-out structure
 
+#ifndef LHASH_NEED_32BIT_OFFSETS
 #define LHASH_NEW_NODE_(s, l, a)      \
     ({                                \
         struct LHASH_NODE_TYPE* __r = \
@@ -102,6 +157,30 @@ struct LHASH_TYPE
         a;                            \
         __r;                          \
     })
+#else // LHASH_NEED_32BIT_OFFSETS
+#define LHASH_NEW_NODE_(s, l, a)         \
+    ({                                   \
+        uint32_t __b = 0;                \
+        size_t __n = sizeof(             \
+            struct LHASH_NODE_TYPE);     \
+        size_t __a = MEM_ALIGNOF(        \
+            struct LHASH_NODE_TYPE);     \
+        struct LHASH_NODE_TYPE* __r =    \
+            LHASH_NODE_ALLOC_ALLOCATE(   \
+                &hash->node_alloc,       \
+                SIZE_ADD(__n, (l) + 1),  \
+                __a, &__b);              \
+        ENSURE(__r != NULL,              \
+            "hash node alloc failed");   \
+        ASSERT(__b > 0);                 \
+        hash->stats.node_struct ++;      \
+        hash->stats.node_mem += (l) + 1; \
+        memcpy(__r->str, s, l);          \
+        __r->str[l] = 0;                 \
+        a;                               \
+        __b;                             \
+    })
+#endif // LHASH_NEED_32BIT_OFFSETS
 
 #ifdef LHASH_NEED_NULL_TERM_KEY
 #define LHASH_NEW_NODE(s, l) \
@@ -153,7 +232,9 @@ static size_t lhash_next_prime(size_t n)
 
 static void LHASH_INIT(
     struct LHASH_TYPE* hash,
+#ifndef LHASH_NEED_32BIT_OFFSETS
     LHASH_ALLOC_OBJ_TYPE* alloc_obj,
+#endif
     const struct options_t* opt)
 {
 #ifdef LHASH_NEED_32BIT_OFFSETS
@@ -174,9 +255,12 @@ static void LHASH_INIT(
     ASSERT(s < UINT32_MAX);
 #endif
 
+#ifndef LHASH_NEED_32BIT_OFFSETS
     hash->alloc_obj = alloc_obj;
-    hash->table = calloc(
-        s, sizeof(struct LHASH_NODE_TYPE*));
+#else
+    LHASH_NODE_ALLOC_INIT(&hash->node_alloc, s, 0); //!!! opt->???_size
+#endif
+    hash->table = calloc(s, sizeof(LHASH_PTR_TYPE));
     ENSURE(hash->table != NULL, "calloc failed");
 
     hash->size = s;
@@ -185,18 +269,33 @@ static void LHASH_INIT(
 static void LHASH_DONE(
     struct LHASH_TYPE* hash)
 {
+#ifdef LHASH_NEED_32BIT_OFFSETS
+    LHASH_NODE_ALLOC_DONE(&hash->node_alloc);
+#endif
     free(hash->table);
 }
 
+#ifndef LHASH_NEED_32BIT_OFFSETS
+#define LHASH_PTR_DEREF(p) (p)
+#else
+#define LHASH_PTR_DEREF(p)                    \
+    (                                         \
+        (struct LHASH_NODE_TYPE*)             \
+        OBJ_ALLOC_DEREF(&hash->node_alloc, p) \
+    )
+#endif
+
 #ifdef LHASH_NEED_NULL_TERM_KEY
 #define LHASH_EQ(p, s, l) \
-    (!strcmp((p)->str, s))
+    (!strcmp(LHASH_PTR_DEREF(p)->str, s))
 #else // LHASH_NEED_NULL_TERM_KEY
 #define LHASH_EQ(p, s, l)                    \
     ({                                       \
-        size_t __n = (p)->len == 0           \
-            ? strlen((p)->str) : (p)->len;   \
-        __n == l && !memcmp((p)->str, s, l); \
+        struct LHASH_NODE_TYPE* __p =        \
+            LHASH_PTR_DEREF(p);              \
+        size_t __n = __p->len == 0           \
+            ? strlen(__p->str) : __p->len;   \
+        __n == l && !memcmp(__p->str, s, l); \
     })
 #endif // LHASH_NEED_NULL_TERM_KEY
 
@@ -219,23 +318,6 @@ static void LHASH_DONE(
         __r;                               \
     })
 
-#ifndef LHASH_NEED_32BIT_OFFSETS
-#define LHASH_NODE_RESULT_TYPE struct LHASH_NODE_TYPE*
-#define LHASH_NODE_RESULT_TYPE_CONST const LHASH_NODE_RESULT_TYPE
-#define LHASH_NODE_RESULT(p) (*p)
-#define LHASH_NULL_RESULT NULL
-#else // LHASH_NEED_32BIT_OFFSETS
-#define LHASH_NODE_RESULT_TYPE uint32_t
-#define LHASH_NODE_RESULT_TYPE_CONST LHASH_NODE_RESULT_TYPE
-#define LHASH_NODE_RESULT(p)                   \
-    ({                                         \
-        size_t __r = PTR_DIFF(p, hash->table); \
-        ASSERT(__r < UINT32_MAX);              \
-        (uint32_t) (__r + 1);                  \
-    })
-#define LHASH_NULL_RESULT 0
-#endif // LHASH_NEED_32BIT_OFFSETS
-
 // stev: Knuth, TAOCP, vol 3, 3rd edition,
 // 6.4 Hashing, Algorithm L, p. 526
 
@@ -244,9 +326,9 @@ static void LHASH_DONE(
 static bool LHASH_LOOKUP(
     const struct LHASH_TYPE* hash,
     const char* key, size_t len,
-    LHASH_NODE_RESULT_TYPE_CONST* result)
+    LHASH_PTR_TYPE_CONST* result)
 {
-    struct LHASH_NODE_TYPE** p;
+    LHASH_PTR_TYPE* p;
     size_t h;
 
     ASSERT(hash->size > 0);
@@ -255,8 +337,7 @@ static bool LHASH_LOOKUP(
             hash->size;
     for (p = hash->table + h; *p; ) {
         if (LHASH_EQ(*p, key, len)) {
-            *result =
-                LHASH_NODE_RESULT(p);
+            *result = *p;
             return true;
         }
         if (p == hash->table)
@@ -265,7 +346,7 @@ static bool LHASH_LOOKUP(
             p --;
     }
 
-    *result = LHASH_NULL_RESULT;
+    *result = LHASH_PTR_NULL;
     return false;
 }
 
@@ -274,9 +355,9 @@ static bool LHASH_LOOKUP(
 static bool LHASH_INSERT(
     struct LHASH_TYPE* hash,
     const char* key, size_t len,
-    LHASH_NODE_RESULT_TYPE* result)
+    LHASH_PTR_TYPE* result)
 {
-    struct LHASH_NODE_TYPE** p;
+    LHASH_PTR_TYPE* p;
     size_t h;
 
     ASSERT(hash->size > 0);
@@ -289,8 +370,7 @@ static bool LHASH_INSERT(
             hash->stats.dups_node ++;
             hash->stats.insert_eq ++;
 #endif
-            *result =
-                LHASH_NODE_RESULT(p);
+            *result = *p;
             return false;
         }
 #ifdef LHASH_NEED_STATISTICS
@@ -306,8 +386,7 @@ static bool LHASH_INSERT(
     ENSURE(hash->used < hash->size - 1,
         "linear hash table overflow"); 
 
-    *p = LHASH_NEW_NODE(key, len);
-    *result = LHASH_NODE_RESULT(p);
+    *result = *p = LHASH_NEW_NODE(key, len);
 #ifdef LHASH_NEED_STATISTICS
     hash->stats.uniq_node ++;
 #endif
@@ -328,10 +407,19 @@ static bool LHASH_IS_EMPTY(
 static size_t LHASH_GET_STRUCT_MEM(
     const struct LHASH_TYPE* hash)
 {
-    size_t r = sizeof(struct LHASH_NODE_TYPE*);
+    size_t r = sizeof(LHASH_PTR_TYPE);
+#ifdef LHASH_NEED_32BIT_OFFSETS
+    size_t s;
+#endif
 
     SIZE_MUL_EQ(r, hash->size);
     SIZE_ADD_EQ(r, sizeof(struct LHASH_TYPE));
+
+#ifdef LHASH_NEED_32BIT_OFFSETS
+    s = LHASH_NODE_ALLOC_GET_STRUCT_MEM(
+        &hash->node_alloc);
+    SIZE_ADD_EQ(r, s);
+#endif
 
     return r;
 }
@@ -345,18 +433,14 @@ static size_t LHASH_GET_STRUCT_MEM(
         fputs((p)->str, f);              \
     } while (0)
 #else // LHASH_NEED_32BIT_OFFSETS
-#define LHASH_PRINT_ONE(t, f, p)        \
-    do {                                \
-        STATIC(TYPEOF_IS(t, const       \
-            struct LHASH_TYPE*));       \
-        STATIC(TYPEOF_IS(f, FILE*));    \
-        STATIC(TYPEOF_IS(p, uint32_t)); \
-        uint32_t __k = p;               \
-        ASSERT(__k > 0);                \
-        __k --;                         \
-        ASSERT(__k < (t)->size);        \
-        fputs((t)->table[__k]->str, f); \
-    } while (0)
+
+static inline void LHASH_PRINT_ONE(
+    const struct LHASH_TYPE* hash, FILE* file,
+    LHASH_PTR_TYPE ptr)
+{
+    fputs(LHASH_PTR_DEREF(ptr)->str, file);
+}
+
 #endif // LHASH_NEED_32BIT_OFFSETS
 
 #ifdef LHASH_NEED_PRINT
@@ -365,14 +449,15 @@ static void LHASH_PRINT(
     const struct LHASH_TYPE* hash,
     FILE* file)
 {
-    struct LHASH_NODE_TYPE **p, **e;
+    LHASH_PTR_TYPE* p;
+    LHASH_PTR_TYPE* e;
 
     for (p = hash->table,
          e = p + hash->size;
          p < e;
          p ++) {
-        if (*p != NULL) {
-            fputs((*p)->str, file);
+        if (*p != LHASH_PTR_NULL) {
+            fputs(LHASH_PTR_DEREF(*p)->str, file);
             fputc('\n', file);
         }
     }
