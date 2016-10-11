@@ -328,7 +328,17 @@ static void* OBJ_ALLOC_ALLOCATE(
     memset(p->base + r, 0, OBJ_ALLOC_OBJ_SIZE); 
 #endif
 
+#if OBJ_ALLOC_NODE_BITS > 0
+    STATIC(OBJ_ALLOC_OFFSET_BITS < SZ(32));
     *result = (i << OBJ_ALLOC_OFFSET_BITS) | (r + 1);
+#else
+    STATIC(OBJ_ALLOC_NODE_SIZE == 1);
+    // => i == 0
+    STATIC(OBJ_ALLOC_OFFSET_BITS == 32);
+    // => (i << OBJ_ALLOC_OFFSET_BITS) == 0
+    *result = r + 1;
+#endif
+
     return p->base + r;
 }
 
