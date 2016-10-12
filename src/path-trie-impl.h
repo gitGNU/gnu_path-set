@@ -43,7 +43,7 @@
 #endif
 
 #endif // !defined(PATH_TRIE_NEED_NODE_32BIT_OFFSETS) ||
-       // !defined(PATH_TRIE_NEED_ELEM_OBJ_ALLOC)
+       //  defined(PATH_TRIE_NEED_ELEM_OBJ_ALLOC)
 
 #ifdef  PATH_TRIE_NAME
 #define PATH_TRIE_MAKE_NAME__(n, s) n ## _path_trie ## s
