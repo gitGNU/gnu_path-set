@@ -188,6 +188,7 @@ static void* OBJ_ALLOC_ALLOCATE(
 {
     struct OBJ_ALLOC_NODE_TYPE* p;
 #ifndef OBJ_ALLOC_OBJ_SIZE
+    bool f = false;
     size_t a, n;
 #endif
     uint32_t r;
@@ -204,8 +205,13 @@ static void* OBJ_ALLOC_ALLOCATE(
 
         OBJ_ALLOC_ASSERT_INVARIANTS(alloc, p);
 
-        if (p->base == NULL)
+        if (p->base == NULL) {
+#ifndef OBJ_ALLOC_OBJ_SIZE
+            a = align;
+            f = true;
+#endif
             break;
+        }
 
 #ifdef OBJ_ALLOC_OBJ_SIZE
         if (p->used >= OBJ_ALLOC_OFFSET_MAX)
@@ -320,6 +326,10 @@ static void* OBJ_ALLOC_ALLOCATE(
     }
 
 #ifndef OBJ_ALLOC_OBJ_SIZE
+    if (f) {
+        a = PTR_ALIGN_SIZE(p->base + p->used, align);
+        ASSERT(a <= align);
+    }
     r = p->used + a;
     p->used += n;
     memset(p->base + r, 0, size);
