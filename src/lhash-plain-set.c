@@ -140,6 +140,8 @@ void lhash_plain_set_print_stats(
         FSIZE(uniq_node,        impl.stats.uniq_node),
         FSIZE(node_insert_eq,   impl.stats.insert_eq),
         FSIZE(node_insert_ne,   impl.stats.insert_ne),
+        FSIZE(node_insert_hit,  impl.stats.insert_hit),
+        FSIZE(node_rehash_hit,  impl.stats.rehash_hit),
         FSIZE(hash_size,        impl.size),
         FSIZE(hash_used,        impl.used),
         FFUNC(hash_load,        lhash_plain_set_get_param_hash_load),

@@ -107,12 +107,13 @@ struct LHASH_NODE_TYPE
 
 #ifdef LHASH_NEED_STATISTICS
 SET_STATS_STRUCT_DECL(
-    insert_ne
 #ifdef LHASH_NEED_32BIT_OFFSETS
-    ,
     node_struct,
-    node_mem
+    node_mem,
 #endif
+    rehash_hit,
+    insert_hit,
+    insert_ne
 )
 #endif // LHASH_NEED_STATISTICS
 
@@ -428,6 +429,9 @@ static void LHASH_REHASH(
         h = LHASH_HASH(n->str, l);
 
         for (q = t + h % s; *q; ) {
+#ifdef LHASH_NEED_STATISTICS
+            hash->stats.rehash_hit ++;
+#endif
             if (q == t)
                 q += s - 1;
             else
@@ -502,6 +506,9 @@ static bool LHASH_INSERT(
     //   hash->used < S <= hash->size - 1
 
     for (p = hash->table + h % hash->size; *p; ) {
+#ifdef LHASH_NEED_STATISTICS
+        hash->stats.insert_hit ++;
+#endif
         if (p == hash->table)
             p += hash->size - 1;
         else

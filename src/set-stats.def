@@ -82,6 +82,12 @@ CASE(size,
 "the path element set structure"
 )
 CASE(size,
+ elem_insert_hit,
+"elem-insert-hit",
+"the number of entries hit inserting in\n"
+"the path element set structure"
+)
+CASE(size,
  elem_rehash_eq,
 "elem-rehash-eq",
 "the number of '==' comparisons rehashing in\n"
@@ -92,6 +98,12 @@ CASE(size,
 "elem-rehash-ne",
 "the number of '!=' comparisons rehashing in\n"
 "the path element hash set structure"
+)
+CASE(size,
+ elem_rehash_hit,
+"elem-rehash-hit",
+"the number of entries hit rehashing in\n"
+"the path element set structure"
 )
 CASE(size,
  node_insert_eq,
@@ -118,6 +130,12 @@ CASE(size,
 "the main set structure"
 )
 CASE(size,
+ node_insert_hit,
+"node-insert-hit",
+"the number of entries hit inserting in\n"
+"the main set structure"
+)
+CASE(size,
  node_rehash_eq,
 "node-rehash-eq",
 "the number of '==' comparisons rehashing in\n"
@@ -128,6 +146,12 @@ CASE(size,
 "node-rehash-ne",
 "the number of '!=' comparisons rehashing in\n"
 "the main hash set structure"
+)
+CASE(size,
+ node_rehash_hit,
+"node-rehash-hit",
+"the number of entries hit rehashing in\n"
+"the main set structure"
 )
 CASE(size,
  hash_size,

@@ -249,6 +249,8 @@ void lhash_path_set_print_stats(
         FSIZE(node_insert_gt,   impl.stats.insert_gt),
         FSIZE(elem_insert_eq,   impl.elem_set.stats.insert_eq),
         FSIZE(elem_insert_ne,   impl.elem_set.stats.insert_ne),
+        FSIZE(elem_insert_hit,  impl.elem_set.stats.insert_hit),
+        FSIZE(elem_rehash_hit,  impl.elem_set.stats.rehash_hit),
         FSIZE(hash_size,        impl.elem_set.size),
         FSIZE(hash_used,        impl.elem_set.used),
         FFUNC(hash_load,        lhash_path_set_get_param_hash_load),
