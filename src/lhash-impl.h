@@ -318,6 +318,12 @@ static void LHASH_DONE(
         __r;                               \
     })
 
+#define LHASH_ASSERT_INVARIANTS(h) \
+    do {                           \
+        ASSERT(h->size > 0);       \
+        ASSERT(h->used < h->size); \
+    } while (0)
+
 // stev: Knuth, TAOCP, vol 3, 3rd edition,
 // 6.4 Hashing, Algorithm L, p. 526
 
@@ -331,11 +337,10 @@ static bool LHASH_LOOKUP(
     LHASH_PTR_TYPE* p;
     size_t h;
 
-    ASSERT(hash->size > 0);
+    LHASH_ASSERT_INVARIANTS(hash);
 
-    h = LHASH_HASH(key, len) %
-            hash->size;
-    for (p = hash->table + h; *p; ) {
+    h = LHASH_HASH(key, len);
+    for (p = hash->table + h % hash->size; *p; ) {
         if (LHASH_EQ(*p, key, len)) {
             *result = *p;
             return true;
@@ -352,19 +357,106 @@ static bool LHASH_LOOKUP(
 
 #endif // LHASH_NEED_LOOKUP
 
+// stev: TODO: promote SIZE_MUL_FLOAT
+// to a global scope ('int-traits.h'?)
+#define SIZE_MUL_FLOAT(x, f)            \
+    ({                                  \
+        float __r;                      \
+        STATIC(IS_CONSTANT(f));         \
+        STATIC(TYPEOF_IS(f, float));    \
+        STATIC(TYPEOF_IS_SIZET(x));     \
+        __r = (float) x * f;            \
+        VERIFY(__r < (float) SIZE_MAX); \
+        (size_t) __r;                   \
+    })
+
+// stev: Knuth, TAOCP, vol 3, 3rd edition,
+// 6.4 Hashing, p. 528
+#define LHASH_GROWTH_THRESHOLD 0.75f
+
+// stev: double the size of the table
+// each time decided to enlarge it; a
+// variant would be to double its size
+// every second time enlarging it --
+// which amounts to the factor below
+// be sqrt(2) ~= 1.4142f
+#define LHASH_GROWTH_FACTOR 2.0f
+
+#ifdef LHASH_NEED_NULL_TERM_KEY
+#define LHASH_KEY_LENGTH(p) \
+    (                       \
+        strlen((p)->str)    \
+    )
+#else // LHASH_NEED_NULL_TERM_KEY
+#define LHASH_KEY_LENGTH(p) \
+    (                       \
+        (p)->len == 0       \
+        ? strlen((p)->str)  \
+        : (p)->len          \
+    )
+#endif // LHASH_NEED_NULL_TERM_KEY
+
+static void LHASH_REHASH(
+    struct LHASH_TYPE* hash)
+{
+    typedef LHASH_PTR_TYPE* ptr_t;
+    ptr_t t, p, e, q;
+    size_t h, s;
+
+    LHASH_ASSERT_INVARIANTS(hash);
+
+    s = lhash_next_prime(
+        SIZE_MUL_FLOAT(hash->size,
+            LHASH_GROWTH_FACTOR));
+    ASSERT(s > hash->size);
+
+    t = calloc(s, sizeof(LHASH_PTR_TYPE));
+    ENSURE(t != NULL, "calloc failed");
+
+    for (p = hash->table,
+         e = p + hash->size;
+         p < e;
+         p ++) {
+        const struct LHASH_NODE_TYPE* n;
+        size_t l;
+
+        if (*p == LHASH_PTR_NULL)
+            continue;
+
+        n = LHASH_PTR_DEREF(*p);
+        l = LHASH_KEY_LENGTH(n);
+        h = LHASH_HASH(n->str, l);
+
+        for (q = t + h % s; *q; ) {
+            if (q == t)
+                q += s - 1;
+            else
+                q --;
+        }
+
+        *q = *p;
+    }
+
+    free(hash->table);
+
+    hash->table = t;
+    hash->size = s;
+    // the new size > the old size =>
+    // the invariants are preserved
+}
+
 static bool LHASH_INSERT(
     struct LHASH_TYPE* hash,
     const char* key, size_t len,
     LHASH_PTR_TYPE* result)
 {
     LHASH_PTR_TYPE* p;
-    size_t h;
+    size_t h, s;
 
-    ASSERT(hash->size > 0);
+    LHASH_ASSERT_INVARIANTS(hash);
 
-    h = LHASH_HASH(key, len) %
-            hash->size;
-    for (p = hash->table + h; *p; ) {
+    h = LHASH_HASH(key, len);
+    for (p = hash->table + h % hash->size; *p; ) {
         if (LHASH_EQ(*p, key, len)) {
 #ifdef LHASH_NEED_STATISTICS
             hash->stats.dups_node ++;
@@ -383,8 +475,41 @@ static bool LHASH_INSERT(
             p --;
     }
 
-    ENSURE(hash->used < hash->size - 1,
-        "linear hash table overflow"); 
+    STATIC(LHASH_GROWTH_THRESHOLD > 0.0f);
+    STATIC(LHASH_GROWTH_THRESHOLD < 1.0f);
+
+    s = SIZE_MUL_FLOAT(hash->size,
+            LHASH_GROWTH_THRESHOLD);
+    VERIFY(s > 0 && s < hash->size);
+    // => s <= hash->size - 1
+
+    if (hash->used < s) {
+        // => hash->used < hash->size - 1
+        goto new_node;
+    }
+
+    // stev: let 'S' be the size of the hash table
+    // before 'LHASH_REHASH' increases it strictly;
+    // thus the 2nd invariant gives: hash->used < S
+
+    LHASH_REHASH(hash);
+    // stev: we have that:
+    //   hash->used < hash->size - 1
+    // indeed:
+    //   hash->size increased strictly =>
+    //   S < hash->size <=>
+    //   S <= hash->size - 1 =>
+    //   hash->used < S <= hash->size - 1
+
+    for (p = hash->table + h % hash->size; *p; ) {
+        if (p == hash->table)
+            p += hash->size - 1;
+        else
+            p --;
+    }
+
+new_node:
+    ASSERT(hash->used < hash->size - 1);
 
     *result = *p = LHASH_NEW_NODE(key, len);
 #ifdef LHASH_NEED_STATISTICS
@@ -393,6 +518,8 @@ static bool LHASH_INSERT(
     hash->used ++;
     return true;
 }
+
+#undef SIZE_MUL_FLOAT
 
 #ifdef LHASH_NEED_IS_EMPTY
 
