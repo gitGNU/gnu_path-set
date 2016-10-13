@@ -658,8 +658,9 @@ static size_t PATH_TRIE_GET_STRUCT_MEM(
 #ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
     r = sizeof(struct PATH_TRIE_TYPE);
 #else
-    r = sizeof(struct PATH_TRIE_NODE_TYPE);
-    SIZE_MUL_EQ(r, trie->table.size);
+    r = trie->table.size;
+    SIZE_SUB_EQ(r, (size_t) trie->table.end);
+    SIZE_MUL_EQ(r, sizeof(struct PATH_TRIE_NODE_TYPE));
     SIZE_ADD_EQ(r, sizeof(struct PATH_TRIE_TYPE));
 #endif
     e = PATH_TRIE_ELEM_GET_STRUCT_MEM(&trie->elem_set);
