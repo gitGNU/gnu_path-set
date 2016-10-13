@@ -464,6 +464,7 @@ static size_t
         OBJ_ALLOC_ASSERT_INVARIANTS(
             alloc, p);
         SIZE_ADD_EQ(r, p->size);
+        SIZE_SUB_EQ(r, p->used);
     }
 #ifdef OBJ_ALLOC_OBJ_SIZE
     SIZE_MUL_EQ(r, OBJ_ALLOC_OBJ_SIZE);

@@ -1,0 +1,94 @@
+#
+# # meta command:
+# $ path-set-test \
+# --config-path-trie-node-32bit-offsets \
+# --config-path-trie-elem-32bit-offsets \
+# --config-debug \
+# --input=tests/files.txt \
+# --expr='10 ** x' \
+# --limits=1-6 \
+# --pool-size=128M \
+# --hash-size=2M \
+# --node-size=4M \
+# --separators='/' \
+# --repeat=10 \
+# --sleep=100 \
+# --run-series
+#
+
+$ date
+Fri Oct 14 00:42:17 EEST 2016
+$
+
+$ make -B CONFIG+=PATH_TRIE_NODE_32BIT_OFFSETS CONFIG+=PATH_TRIE_ELEM_32BIT_OFFSETS 32BIT=no DEBUG=yes
+gcc -Wall -Wextra -std=gnu99 -I. -I../lib/json-type -I../lib/gnulib -DPROGRAM=path-set -DCONFIG_PATH_TRIE_NODE_32BIT_OFFSETS -DCONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS -DDEBUG -g main.c common.c clocks.c set-intf.c trie-path-set.c lhash-path-set.c ghash-path-set.c trie-plain-set.c lhash-plain-set.c ghash-plain-set.c ../lib/json-type/pool-alloc.c ../lib/gnulib/hash.c -o path-set -lm
+$
+
+$ ./path-set -C
+CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS: yes
+CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS: yes
+CONFIG_PATH_TRIE_UINT_HASH_IDENTOP:  no
+CONFIG_TRIE_PATH_SET_PRINT_SET:      no
+CONFIG_VALUE_TYPE_SIZE:              64
+32BIT:                               no
+DEBUG:                               yes
+OPT:                                 -
+$
+
+$ PATH_SET_TEST_INPUT=tests/files.txt
+$ PATH_SET_TEST_EXPR='10 ** x'
+$ PATH_SET_TEST_LIMITS=1-6
+$ PATH_SET_TEST_POOL_SIZE=128M
+$ PATH_SET_TEST_HASH_SIZE=2M
+$ PATH_SET_TEST_NODE_SIZE=4M
+$ PATH_SET_TEST_SEPARATORS='/'
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --ternary-tree
+0c84f2d3746e9e6a22a97ee6523476ecb3e8d911
+
+real	0m16.889s
+user	0m12.857s
+sys	0m3.908s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --linear-hash
+80ed12d5aa4f2dc554865ec0bd73823e703c5274
+
+real	0m11.441s
+user	0m7.324s
+sys	0m3.704s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --gnulib-hash
+bc5f03dc75fd3a265655fb7d4178292f89ad1b65
+
+real	0m12.604s
+user	0m7.964s
+sys	0m4.212s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --ternary-tree
+99845a5576dbc6e9b13e012403fdb6fca6991f3c
+
+real	0m26.488s
+user	0m22.881s
+sys	0m4.352s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --linear-hash
+cfb73aff1bcdc912ee03e16f2f2311fbe884da5e
+
+real	0m20.128s
+user	0m15.689s
+sys	0m4.332s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --gnulib-hash
+afab9a9ff3b2c79bec13b6e94444f3c8975ed323
+
+real	0m22.637s
+user	0m18.121s
+sys	0m4.336s
+$
+
