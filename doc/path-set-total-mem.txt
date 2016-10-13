@@ -22,7 +22,7 @@ along with Path-Set.  If not, see <http://www.gnu.org/licenses/>.
                            =========================
                         Ştefan Vargyas, stvar@yahoo.com
 
-                                  Oct  5, 2016
+                                  Oct 14, 2016
 
 
 Table of Contents
@@ -42,7 +42,7 @@ its path element structure if any.
 
 The resulting data obtained from running the same instances of 'path-set-test'
 command lines as those in 'doc/path-set.txt' was put in a separate directory,
-'tests/2016-09-29'.
+'tests/2016-10-14'.
 
 Below is shown four of the 'path-set-test-grep' commands seen in 'doc/path-set'
 -- the ones for 32-bit platforms (`--config-32bit') and for 64-bit platforms
@@ -53,7 +53,7 @@ using 32-bit offsets (`--not --config-32bit --config-path-trie-32bit-offsets')
 
   $ . src/commands.sh
 
-  $ cd tests/2019-09-29
+  $ cd tests/2016-10-14
 
   # path-set-test-grep command #1:
   $ path-set-test-grep -Fe \
@@ -72,8 +72,8 @@ using 32-bit offsets (`--not --config-32bit --config-path-trie-32bit-offsets')
   --not --config-32bit --config-path-trie-32bit-offsets \
   --stat-total{-node,}-mem=+
   struct-type  set-type     total-node-mem  25.4M  32.0M  total-mem  25.4M  72.5M
-  path-trie    linear-hash           19.9M    22%    38%     115.9M  -356%   -60%
-  path-trie    gnulib-hash           26.8M    -5%    16%     163.0M  -542%  -125%
+  path-trie    linear-hash           19.9M    22%    38%     100.0M  -294%   -38%
+  path-trie    gnulib-hash           26.8M    -5%    16%     143.8M  -466%   -98%
   plain-set    linear-hash           28.9M   -14%    10%      44.9M   -77%    38%
   plain-set    gnulib-hash           32.0M   -26%     0%      72.5M  -185%     0%
   
@@ -94,9 +94,9 @@ using 32-bit offsets (`--not --config-32bit --config-path-trie-32bit-offsets')
   --not --config-32bit --config-path-trie-32bit-offsets \
   --stat-total{-node,}-mem=+
   struct-type  set-type     total-node-mem  45.8M  59.3M  total-mem  45.8M  101.1M
-  path-trie    linear-hash           40.5M    12%    32%     136.5M  -198%    -35%
+  path-trie    linear-hash           40.5M    12%    32%     103.6M  -126%     -2%
   plain-set    linear-hash           52.9M   -16%    11%      68.9M   -51%     32%
-  path-trie    gnulib-hash           53.4M   -17%    10%     189.9M  -315%    -88%
+  path-trie    gnulib-hash           53.4M   -17%    10%     150.5M  -229%    -49%
   plain-set    gnulib-hash           59.3M   -29%     0%     101.1M  -121%      0%
   
 The labels '#[1346]' seen above are paired with those in 'doc/path-set.txt'.
@@ -204,71 +204,70 @@ SHA1-named files (the 'find' below produces an empty output):
 
   $ find -maxdepth 1 -name "$SHA1NAMES"
 
-
 Third step: proceed running the exact same 'path-set-test' command set as those
 in 'doc/path-set.txt':
 
   $ path-set-test -E -i tests/files.txt -o+ -q --config-debug
-  649b9b008d6370f6a589240d47daed7576d1df6d
+  a0fb1b59e893e807858de3104abb59ed7cf01004
 
   $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
   --config-path-trie-32bit-offsets
-  b92fce4c64395508619c78f94b7f7cdf24eded97
+  0d228097573d7d81ae750f695237735a1417ef1f
 
   $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
   --config-32bit
-  3b8323945043f5374cdfcc8ae2b69ade01bf2a7a
+  69eaa9ab83817847ad97803509d12f6e2e1c1c17
 
   $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
   --separators='/.-'
-  2919c968767f5133cb246d5d7190960b3d842097
+  61b1e3e04a57d60979486d72fab92cc3b82768f3
 
   $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
   --config-path-trie-32bit-offsets --separators='/.-'
-  2654b1b62d49d2692a1fb8b81a8ffc0aadb0678d
+  27afc092e77e6e0d3b8a89b57df68c77fa6fdfae
 
   $ path-set-test -E -i tests/files.txt -o+ -q --config-debug \
   --config-32bit --separators='/.-'
-  ec1e78182775495ea4a51dece757884771c014cb
+  3c3c0202253e2bce0ca9592d0c6d6875ebe4154b
 
   $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
   --pool-size=512M
-  e39299ea524fe3ec725b507a534e936fe86cc816
+  8f801ec53f55bd436d1239c1fbab30650158eb01
 
   $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
   --config-path-trie-32bit-offsets --pool-size=512M
-  2404929c4bc79551607c1f5ccdbbb84fcc72a104
+  30bf8acc544d25099c0853ab3ae30e5008162b75
 
   $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
   --config-32bit --pool-size=512M
-  14357156ea9bc164562ad6eb055095ff697dbfb3
+  d213d846722d2cc08e97c35f8d7a04a068d9a5af
 
   $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
   --pool-size=512M --separators='/.-'
-  b781109f2c6158b0ca56e9253b1bc6ca830f1eea
+  b7c6a4bf7743a7e7f82aa435fd6b1a50a360af3a
 
   $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
   --config-path-trie-32bit-offsets --pool-size=512M --separators='/.-'
-  857c1130d0c1a8f0db4109fa4edce68ad9424df9
+  d729038b83e27628e3e4f5848745984b3c29466b
 
   $ path-set-test -E -i tests/files2.txt -o+ -q --config-debug \
   --config-32bit --pool-size=512M --separators='/.-'
-  dac5c3a70223e233106be23e77726ac1fd5aacd2
+  740f4911d0c3fcc612c71df8dd923ccdeef71c1b
 
-Fourth step: move to a new directory 'tests/2016-09-29' all the 84 SHA1-named
+Fourth step: move to a new directory 'tests/2016-10-14' all the 84 SHA1-named
 files produced by the 'path-set-test' commands above:
 
   $ ls -1 $SHA1NAMES|wc -l
   84
 
-  $ mkdir ../tests/2016-09-29
+  $ mkdir ../tests/2016-10-14
 
-  $ mv -t ../tests/2016-09-29 $SHA1NAMES
+  $ mv -t ../tests/2016-10-14 $SHA1NAMES
 
 Fifth step: arrange the statistics data obtained in the SHA1-named files just
-moved to 'tests/2016-09-29' into easily readable table formats:
+moved to 'tests/2016-10-14' into easily readable table formats:
 
-  $ cd ../tests/2016-09-29
+  $ cd ../tests/2016-10-14
 
   # path-set-test-grep command #1:
   $ path-set-test-grep -Fe \
@@ -311,16 +310,16 @@ moved to 'tests/2016-09-29' into easily readable table formats:
   --input=tests/files.txt --not --config-32bit --config-path-trie-32bit-offsets \
   --stat-total{-node,}-mem=+
   separators  struct-type  set-type      total-node-mem  25.4M  32.0M  total-mem  25.4M  72.5M
-  '/'         path-trie    linear-hash            19.9M    22%    38%     115.9M  -356%   -60%
-  '/.-'       path-trie    linear-hash            25.1M     1%    22%     121.1M  -377%   -67%
-  '/'         path-trie    gnulib-hash            26.8M    -5%    16%     163.0M  -542%  -125%
+  '/'         path-trie    linear-hash            19.9M    22%    38%     100.0M  -294%   -38%
+  '/.-'       path-trie    linear-hash            25.1M     1%    22%      97.9M  -285%   -35%
+  '/'         path-trie    gnulib-hash            26.8M    -5%    16%     143.8M  -466%   -98%
   '/'         plain-set    linear-hash            28.9M   -14%    10%      44.9M   -77%    38%
   '/.-'       plain-set    linear-hash            28.9M   -14%    10%      44.9M   -77%    38%
   '/'         plain-set    gnulib-hash            32.0M   -26%     0%      72.5M  -185%     0%
   '/.-'       plain-set    gnulib-hash            32.0M   -26%     0%      72.5M  -185%     0%
-  '/.-'       path-trie    gnulib-hash            32.1M   -26%     0%     168.2M  -562%  -132%
-  '/.-'       path-trie    ternary-tree           54.6M  -115%   -71%     150.6M  -493%  -108%
-  '/'         path-trie    ternary-tree           76.0M  -199%  -138%     172.1M  -577%  -137%
+  '/.-'       path-trie    gnulib-hash            32.1M   -26%     0%     140.3M  -453%   -94%
+  '/.-'       path-trie    ternary-tree           54.6M  -115%   -71%     122.7M  -383%   -69%
+  '/'         path-trie    ternary-tree           76.0M  -199%  -138%     152.9M  -502%  -111%
   '/'         plain-set    ternary-tree          121.9M  -380%  -281%     121.9M  -380%   -68%
   '/.-'       plain-set    ternary-tree          121.9M  -380%  -281%     121.9M  -380%   -68%
   
@@ -365,16 +364,16 @@ moved to 'tests/2016-09-29' into easily readable table formats:
   --input=tests/files2.txt --not --config-32bit --config-path-trie-32bit-offsets \
   --stat-total{-node,}-mem=+
   separators  struct-type  set-type      total-node-mem  45.8M  59.3M  total-mem  45.8M  101.1M
-  '/'         path-trie    linear-hash            40.5M    12%    32%     136.5M  -198%    -35%
-  '/.-'       path-trie    linear-hash            52.9M   -16%    11%     148.9M  -225%    -47%
+  '/'         path-trie    linear-hash            40.5M    12%    32%     103.6M  -126%     -2%
+  '/.-'       path-trie    linear-hash            52.9M   -16%    11%      99.8M  -118%      1%
   '/'         plain-set    linear-hash            52.9M   -16%    11%      68.9M   -51%     32%
   '/.-'       plain-set    linear-hash            52.9M   -16%    11%      68.9M   -51%     32%
-  '/'         path-trie    gnulib-hash            53.4M   -17%    10%     189.9M  -315%    -88%
+  '/'         path-trie    gnulib-hash            53.4M   -17%    10%     150.5M  -229%    -49%
   '/'         plain-set    gnulib-hash            59.3M   -29%     0%     101.1M  -121%      0%
   '/.-'       plain-set    gnulib-hash            59.3M   -29%     0%     101.1M  -121%      0%
-  '/.-'       path-trie    gnulib-hash            66.8M   -46%   -13%     203.0M  -343%   -101%
-  '/.-'       path-trie    ternary-tree          111.0M  -142%   -87%     207.0M  -352%   -105%
-  '/'         path-trie    ternary-tree          149.7M  -227%  -153%     245.7M  -437%   -143%
+  '/.-'       path-trie    gnulib-hash            66.8M   -46%   -13%     144.1M  -215%    -43%
+  '/.-'       path-trie    ternary-tree          111.0M  -142%   -87%     148.1M  -223%    -46%
+  '/'         path-trie    ternary-tree          149.7M  -227%  -153%     206.3M  -350%   -104%
   '/'         plain-set    ternary-tree          272.3M  -494%  -359%     272.3M  -494%   -169%
   '/.-'       plain-set    ternary-tree          272.3M  -494%  -359%     272.3M  -494%   -169%
   
