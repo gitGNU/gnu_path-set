@@ -139,10 +139,12 @@ these to return a value representing:
 This fix is minimal since it implies changes to a single source file, that is
 'src/path-trie-impl.h'.
 
-A more involved resolution of the issue of 'total-mem', would be not to alter the
+A more involved resolution of the issue of 'total-mem' would be not to alter the
 meaning of functions '*_get_struct_mem', but to extend it. This is to say, that
 each such function to receive an extra boolean argument. The additional argument
 indicate whether or not the value returned by the function includes *the amount
 of memory the structure currently allocated for its nodes*. Such change implies
 modifying each 'src/*-set.c' file, for to pass the 'false' value to the newly
-added argument of the site of each call to these '*_get_struct_mem' functions.
+added argument on the site of each call to these '*_get_struct_mem' functions.
+
+
