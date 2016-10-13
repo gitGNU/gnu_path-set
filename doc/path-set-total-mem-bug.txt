@@ -22,20 +22,20 @@ along with Path-Set.  If not, see <http://www.gnu.org/licenses/>.
                            ==========================
                         Ştefan Vargyas, stvar@yahoo.com
 
-                                  Oct 13, 2016
+                                  Oct 14, 2016
 
 
-This file documents an embarrassing 'bug' introduced right at the time Path-Set
+This file documents a quite obscure bug introduced right at the time Path-Set
 got its 'total-mem' statistics parameter: the computations of 'total-mem' suffer
-from a conceptual error which will be revealed below.
+from a subtle error which will be revealed below.
 
 The values of 'total-mem' produced by a given 'path-set' binary are flawed, when
 the binary was compiled with 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' defined. When
 not -- the values of 'total-mem' are correct.
 
 For starters, let's notice that the 'grep' command below applied to the source
-files implementing the dictionaries of Path-Set -- files 'src/*-set.c' -- show
-an uniform pattern for the computations of 'total-mem':
+files implementing the dictionaries of Path-Set -- the files 'src/*-set.c' --
+show an uniform pattern for the computations of 'total-mem':
 
   $ cd src
 
@@ -59,7 +59,7 @@ This is to say that the equation of 'total-mem' is uniformly:
 The internal statistics parameter 'struct_mem' is obtained from each dictionary
 by a corresponding 'get_struct_mem' function. These functions compute the total
 amount of bytes of memory currently claimed from the free store by the respective
-structure.
+structure summed with the amount of memory consumed by the structure itself.
 
   $ grep *-set.c -Pwe '[a-z_]+_get_struct_mem' -ho|sort -u
   path_trie_get_struct_mem
@@ -118,20 +118,22 @@ that is the path trie structure in 'src/path-trie-impl.h':
   
   static PATH_TRIE_PTR_TYPE PATH_TRIE_ALLOC_NODE(
 
-The path tries allocate node structures by themselves in the case of the program
-was compiled with 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS', i.e. when the parameter 'PATH_TRIE_NEED_NODE_32BIT_OFFSETS' gets defined in the files 'src/*-path-set.c',
+The path tries allocate node structures by themselves when the 'path-set' binary
+was compiled with 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS', i.e. when the parameter 
+'PATH_TRIE_NEED_NODE_32BIT_OFFSETS' gets defined in the files 'src/*-path-set.c',
 prior to including 'src/path-trie-impl.h' therein.
 
 Summarizing, the values of stat parameter 'total-mem' produced by a 'path-set'
 binary are flawed, when the binary was compiled with the configuration parameter
 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' defined. Otherwise, the values are correct.
 
-In conclusion, remark that the easiest fix is to alter the meaning of parameter
-'struct_mem', i.e. alter the meaning of '*_get_struct_mem' functions for these
-to return a value representing:
+Finally, only remark that a fix of the bug is to alter the meaning of parameter
+'struct_mem', i.e. to alter the meaning of the '*_get_struct_mem' functions for
+these to return a value representing:
 
   the total amount of bytes of memory currently reserved from the free
-  store by the data structure from which *is subtracted* the amount of
+  store by the data structure, including the amount of memory occupied
+  by the structure itself, but *not including* the amount of bytes of
   memory the structure currently allocated for its nodes.
 
 This fix is minimal since it implies changes to a single source file, that is
@@ -142,7 +144,5 @@ meaning of functions '*_get_struct_mem', but to extend it. This is to say, that
 each such function to receive an extra boolean argument. The additional argument
 indicate whether or not the value returned by the function includes *the amount
 of memory the structure currently allocated for its nodes*. Such change implies
-modifying each an every 'src/*-set.c' file, for to pass 'false' to the calls of
-'*_get_struct_mem' functions.
-
-
+modifying each 'src/*-set.c' file, for to pass the 'false' value to the newly
+added argument of the site of each call to these '*_get_struct_mem' functions.
