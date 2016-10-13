@@ -1,0 +1,148 @@
+Copyright (C) 2016  Stefan Vargyas
+
+This file is part of Path-Set.
+
+Path-Set is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Path-Set is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Path-Set.  If not, see <http://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------------
+
+
+                           Path-Set's 'total-mem' Bug
+                           ==========================
+                        Ştefan Vargyas, stvar@yahoo.com
+
+                                  Oct 13, 2016
+
+
+This file documents an embarrassing 'bug' introduced right at the time Path-Set
+got its 'total-mem' statistics parameter: the computations of 'total-mem' suffer
+from a conceptual error which will be revealed below.
+
+The values of 'total-mem' produced by a given 'path-set' binary are flawed, when
+the binary was compiled with 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' defined. When
+not -- the values of 'total-mem' are correct.
+
+For starters, let's notice that the 'grep' command below applied to the source
+files implementing the dictionaries of Path-Set -- files 'src/*-set.c' -- show
+an uniform pattern for the computations of 'total-mem':
+
+  $ cd src
+
+  $ grep *-set.c -Pwe '[a-z_]+_get_struct_mem' -B6 -A3
+  ghash-path-set.c-static size_t ghash_path_set_get_param_total_mem(
+  ghash-path-set.c-    const struct ghash_path_set_t* set)
+  ghash-path-set.c-{
+  ghash-path-set.c-    size_t n, s;
+  ghash-path-set.c-
+  ghash-path-set.c-    n = ghash_path_set_get_param_total_node_mem(set);
+  ghash-path-set.c:    s = path_trie_get_struct_mem(&set->impl);
+  ghash-path-set.c-
+  ghash-path-set.c-    return SIZE_ADD(n, s);
+  ghash-path-set.c-}
+  ...
+
+This is to say that the equation of 'total-mem' is uniformly:
+
+  (1) total_mem = total_node_mem + struct_mem.
+
+The internal statistics parameter 'struct_mem' is obtained from each dictionary
+by a corresponding 'get_struct_mem' function. These functions compute the total
+amount of bytes of memory currently claimed from the free store by the respective
+structure.
+
+  $ grep *-set.c -Pwe '[a-z_]+_get_struct_mem' -ho|sort -u
+  path_trie_get_struct_mem
+  plain_ghash_get_struct_mem
+  plain_lhash_get_struct_mem
+  plain_trie_get_struct_mem
+
+  $ grep *-impl.h -Pwe '[A-Z_]+_GET_STRUCT_MEM(?=\()' -o
+  ghash-impl.h:GHASH_GET_STRUCT_MEM
+  lhash-impl.h:LHASH_GET_STRUCT_MEM
+  path-trie-impl.h:PATH_TRIE_GET_STRUCT_MEM
+  path-trie-impl.h:PATH_TRIE_ELEM_GET_STRUCT_MEM
+  trie-impl.h:TRIE_GET_STRUCT_MEM
+
+At this moment, one can grasp instantly the issue with equation (1): for certain
+dictionary types, 'struct_mem' includes also the amount of memory *used* by the
+node structures of the respective dictionaries -- amounts already accounted for
+by the 'total_node_mem' stat parameter. This happens when a dictionary structure
+does not allocate memory for its node structures via the pool allocator of its
+parent set structure (that which is defined generically in 'src/set-impl.h', and
+made concrete in each 'src/*-set.c' files), but allocates node structures on its
+own.
+
+The command below produces the definitions of the '*_NEW_NODE' macros for each of
+the generic set structures of Path-Set. These '*_NEW_NODE' macros allocate node
+structures for each of the respective set structures.
+
+  $ grep {[gl]hash,trie,path-trie}-impl.h -Pne '#define\s+[A-Z_]+_NEW_NODE_?' -A16
+  ...
+
+The output produced shows that there is only one such structure which does not
+use in a certain case the pool allocator, but is allocating the nodes on its own:
+that is the path trie structure in 'src/path-trie-impl.h':
+
+  $ grep path-trie-impl.h -Pe '#define\s+[A-Z_]+_NEW_NODE' -C5
+  #ifndef PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+  
+  // stev: we presume that the alloc function
+  // return a pointer to a zeroed-out structure
+  
+  #define PATH_TRIE_NEW_NODE(e)             \
+      ({                                    \
+          struct PATH_TRIE_NODE_TYPE* __r = \
+              PATH_TRIE_ALLOC_NODE_FUNC(    \
+                  trie->alloc_obj);         \
+          __r->elem = e;                    \
+          __r;                              \
+      })
+  
+  #else // PATH_TRIE_NEED_NODE_32BIT_OFFSETS
+  
+  #define PATH_TRIE_NEW_NODE(e)         \
+      (                                 \
+          PATH_TRIE_ALLOC_NODE(trie, e) \
+      )
+  
+  static PATH_TRIE_PTR_TYPE PATH_TRIE_ALLOC_NODE(
+
+The path tries allocate node structures by themselves in the case of the program
+was compiled with 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS', i.e. when the parameter 'PATH_TRIE_NEED_NODE_32BIT_OFFSETS' gets defined in the files 'src/*-path-set.c',
+prior to including 'src/path-trie-impl.h' therein.
+
+Summarizing, the values of stat parameter 'total-mem' produced by a 'path-set'
+binary are flawed, when the binary was compiled with the configuration parameter
+'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' defined. Otherwise, the values are correct.
+
+In conclusion, remark that the easiest fix is to alter the meaning of parameter
+'struct_mem', i.e. alter the meaning of '*_get_struct_mem' functions for these
+to return a value representing:
+
+  the total amount of bytes of memory currently reserved from the free
+  store by the data structure from which *is subtracted* the amount of
+  memory the structure currently allocated for its nodes.
+
+This fix is minimal since it implies changes to a single source file, that is
+'src/path-trie-impl.h'.
+
+A more involved resolution of the issue of 'total-mem', would be not to alter the
+meaning of functions '*_get_struct_mem', but to extend it. This is to say, that
+each such function to receive an extra boolean argument. The additional argument
+indicate whether or not the value returned by the function includes *the amount
+of memory the structure currently allocated for its nodes*. Such change implies
+modifying each an every 'src/*-set.c' file, for to pass 'false' to the calls of
+'*_get_struct_mem' functions.
+
+
