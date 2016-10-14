@@ -541,12 +541,16 @@ static bool LHASH_IS_EMPTY(
 static size_t LHASH_GET_STRUCT_MEM(
     const struct LHASH_TYPE* hash)
 {
-    size_t r = sizeof(LHASH_PTR_TYPE);
 #ifdef LHASH_NEED_32BIT_OFFSETS
-    size_t s;
+    size_t r, s;
+#else
+    size_t r;
 #endif
 
-    SIZE_MUL_EQ(r, hash->size);
+    LHASH_ASSERT_INVARIANTS(hash);
+
+    r = hash->size - hash->used;
+    SIZE_MUL_EQ(r, sizeof(LHASH_PTR_TYPE));
     SIZE_ADD_EQ(r, sizeof(struct LHASH_TYPE));
 
 #ifdef LHASH_NEED_32BIT_OFFSETS
