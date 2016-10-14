@@ -278,7 +278,7 @@ Upon building it, 'path-set' can be asked to produce brief help info on stdout:
     -E|--[print-]elems       print out the path elements
   the options are:
     -p|--pool-size NUM[KM]   preallocated memory pool size (default 128K)
-    -h|--hash-size NUM[KM]   by case, the linear hash table size or the gnulib
+    -h|--hash-size NUM[KM]   by case, the linear hash table or the gnulib
                                hash table initial size (default 1K)
     -r|--struct-type TYPE    use the specified structure type: any of l|plain-set
        --plain-set             or p[ath-trie]; the default is path-trie
