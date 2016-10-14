@@ -351,6 +351,16 @@ error()
     return $f
 }
 
+export PATH_SET_TEST_INPUT='+'
+export PATH_SET_TEST_EXPR='+'
+export PATH_SET_TEST_LIMITS='+'
+export PATH_SET_TEST_POOL_SIZE='+'
+export PATH_SET_TEST_HASH_SIZE='+'
+export PATH_SET_TEST_NODE_SIZE='+'
+export PATH_SET_TEST_STRUCT_TYPE='+'
+export PATH_SET_TEST_SET_TYPE='+'
+export PATH_SET_TEST_SEPARATORS='+'
+
 path-set-test()
 {
     local self="path-set-test"
