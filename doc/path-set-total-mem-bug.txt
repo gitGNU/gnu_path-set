@@ -33,6 +33,10 @@ The values of 'total-mem' produced by a given 'path-set' binary are flawed, when
 the binary was compiled with 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' defined. When
 not -- the values of 'total-mem' are correct.
 
+First thing one must be aware of reading this document is that the source files
+referenced below belong to the source tree revision identified in Path-Set's git
+repository by commit hash 0cf0b491a28e348cdc9041d29d28145ee28d4be4.
+
 For starters, let's notice that the 'grep' command below applied to the source
 files implementing the dictionaries of Path-Set -- the files 'src/*-set.c' --
 show an uniform pattern for the computations of 'total-mem':
