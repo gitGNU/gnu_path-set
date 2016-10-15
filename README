@@ -384,7 +384,7 @@ parameters it receives as input and to record in text files all the statistics
 information obtained from 'path-set'.
 
 However, the details of using 'path-set-test' are a bit more involved. The shell
-function accepts the following the command line options:
+function accepts the following command line options:
 
   $ funchelp -f commands.sh -c path-set-test --long-wrap-join=auto
   actions:
@@ -746,7 +746,7 @@ relative to the same grepping criteria that the invoking commmand line defined.
 The second name is the average value of the 'NAME' stat parameter of 'path-set'
 relative to the grepping criteria that the invoking commmand line defined, but
 restricted to struct type `--plain-set' and set type `--gnulib-hash'. These two
-extra columns attached to column 'NAME' contains percentage values as described
+extra columns attached to column 'NAME' contain percentage values as described
 above for the case of statistics parameter options `--stat-NAME=VALUE', where
 'VALUE' is of form 'NUM[.NUM][KMG]'. Thus a command line like:
 
