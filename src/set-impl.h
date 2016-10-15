@@ -118,7 +118,7 @@ struct SET_TYPE* SET_CREATE(
     memset(r, 0, n);
 
 #ifdef SET_NEED_POOL_ALLOC
-    pool_alloc_init(&r->pool, opt->pool_size);
+    pool_alloc_init(&r->pool, opt->pool_size, 0);
     SET_IMPL_INIT(&r->impl, r, opt);
 #else
     SET_IMPL_INIT(&r->impl, opt);

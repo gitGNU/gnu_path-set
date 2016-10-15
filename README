@@ -255,11 +255,10 @@ An empty invocation command line of 'make' produces the following output:
   gcc -Wall -Wextra -std=gnu99 \
   -I. -I../lib/json-type -I../lib/gnulib \
   -DPROGRAM=path-set -DDEBUG -g \
-  main.c common.c clocks.c set-intf.c \
+  main.c common.c clocks.c set-intf.c pool-alloc.c \
   trie-path-set.c lhash-path-set.c ghash-path-set.c \
   trie-plain-set.c lhash-plain-set.c ghash-plain-set.c \
-  ../lib/json-type/pool-alloc.c ../lib/gnulib/hash.c \
-  -o path-set -lm
+  ../lib/gnulib/hash.c -o path-set -lm
 
 Upon building it, 'path-set' can be asked to produce brief help info on stdout:
 
@@ -277,7 +276,7 @@ Upon building it, 'path-set' can be asked to produce brief help info on stdout:
     -P|--[print-]set         print out the path set
     -E|--[print-]elems       print out the path elements
   the options are:
-    -p|--pool-size NUM[KM]   preallocated memory pool size (default 128K)
+    -p|--pool-size NUM[KM]   memory pool initial size (default 128K)
     -h|--hash-size NUM[KM]   by case, the linear hash table or the gnulib
                                hash table initial size (default 1K)
     -r|--struct-type TYPE    use the specified structure type: any of l|plain-set
@@ -304,8 +303,8 @@ given in the command line for to produce on stdout their own kind of output.
 
 The meanings of almost all the command line options above are obvious (having in
 mind the descriptions made in the previous section). Only note that the command
-line option `-p|--pool-size' defines the amount of free store memory claimed in
-advance by the fixed-size memory pool of 'path-set'. The memory pool is used for:
+line option `-p|--pool-size' defines the initial amount of free store memory
+claimed by the memory pool of 'path-set'. The memory pool is used for:
 
   (a) the nodes of the main structure, when this is of type 'plain-set';
   (b) the nodes of the main structure, when this is of type 'path-trie',
@@ -806,8 +805,6 @@ directory from Json-Type's and Gnulib's 'git' repositories:
   ----------------------------------------  -------------------------
   bd82a90d2881d2aa588ea72855f788cf8904e9be  json-type/config.h
   d12bf27027475b25022bef19c5ac2937ac66b867  json-type/int-traits.h
-  07c11ea53bad8435fd076ff626e779e54a4dc35a  json-type/pool-alloc.c
-  909a7e1aea388521ed619628c178b8fff13e796e  json-type/pool-alloc.h
   53e49832ca9604f9d53774c4d92f20e638eddfaa  json-type/ptr-traits.h
   9a05940bb563a5630d4e221dfeebf463f2c9bd8d  json-type/stack-impl.h
   ----------------------------------------  -------------------------

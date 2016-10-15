@@ -29,13 +29,13 @@ SRCS := main.c \
         common.c \
         clocks.c \
         set-intf.c \
+        pool-alloc.c \
         trie-path-set.c \
         lhash-path-set.c \
         ghash-path-set.c \
         trie-plain-set.c \
         lhash-plain-set.c \
         ghash-plain-set.c \
-        ../lib/json-type/pool-alloc.c \
         ../lib/gnulib/hash.c
 
 BIN  := path-set

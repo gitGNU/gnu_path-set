@@ -184,7 +184,7 @@ static void usage()
         "  -P|--[print-]set         print out the path set\n"
         "  -E|--[print-]elems       print out the path elements\n"
         "the options are:\n"
-        "  -p|--pool-size NUM[KM]   preallocated memory pool size (default 128K)\n"
+        "  -p|--pool-size NUM[KM]   memory pool initial size (default 128K)\n"
         "  -h|--hash-size NUM[KM]   by case, the linear hash table or the gnulib\n"
         "                             hash table initial size (default 1K)\n"
 #ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
