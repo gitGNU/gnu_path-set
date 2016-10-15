@@ -188,7 +188,7 @@ static void usage()
         "  -h|--hash-size NUM[KM]   by case, the linear hash table or the gnulib\n"
         "                             hash table initial size (default 1K)\n"
 #ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
-        "  -n|--node-size NUM[KM]   the path trie table initial size (default 1K)\n"
+        "  -n|--node-size NUM[KM]   the path trie node table initial size (default 1K)\n"
 #endif
         "  -r|--struct-type TYPE    use the specified structure type: any of l|plain-set\n"
         "     --plain-set             or p[ath-trie]; the default is path-trie\n"
