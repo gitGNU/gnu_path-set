@@ -307,11 +307,15 @@ mind the descriptions made in the previous section). Only note that the command
 line option `-p|--pool-size' defines the amount of free store memory claimed in
 advance by the fixed-size memory pool of 'path-set'. The memory pool is used for:
 
-  (a) the nodes of the main structure, being it 'plain-set' or 'path-trie';
-  (b) the nodes of the path element structure, only in case of 'path-trie's
-      when 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' was not defined.
-  (c) the file name paths in the case of '{linear,gnulib}-hash' 'plain-set's;
-  (d) the file name path elements in case of '{linear,gnulib}-hash' 'path-trie's.
+  (a) the nodes of the main structure, when this is of type 'plain-set';
+  (b) the nodes of the main structure, when this is of type 'path-trie',
+      compiled without 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' defined;
+  (c) the path element nodes of 'path-trie's, excluding the 'linear-hash'
+      ones compiled with 'CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS' defined;
+  (d) the path strings in the case of '{linear,gnulib}-hash' 'plain-set's;
+  (e) the path element strings of 'path-trie's, excluding the 'linear-hash'
+      ones compiled with 'CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS' defined;
+  (f) the path element strings in case of 'gnulib-hash' 'path-trie's.
 
 If building 'path-set' with 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS' defined, then
 the help info would include an extra `-n|--node-size' command line option:
