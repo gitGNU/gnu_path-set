@@ -44,6 +44,10 @@ The resulting data obtained from running the same instances of 'path-set-test'
 command lines as those in 'doc/path-set.txt' was put in a separate directory,
 'tests/2016-10-14'.
 
+First thing one must be aware of reading this document is that it is based on
+the source tree revision identified in Path-Set's git repository by commit hash
+2411e8debaa6021d5c4f2110193cf203e53eb4d3.
+
 Below is shown four of the 'path-set-test-grep' commands seen in 'doc/path-set'
 -- the ones for 32-bit platforms (`--config-32bit') and for 64-bit platforms
 using 32-bit offsets (`--not --config-32bit --config-path-trie-32bit-offsets')
