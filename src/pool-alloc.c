@@ -85,6 +85,7 @@ void* pool_alloc_allocate(
     struct pool_alloc_t* alloc,
     size_t size, size_t align)
 {
+    const size_t s = sizeof(struct pool_alloc_node_t);
     struct pool_alloc_node_t* p;
     size_t a, n, r;
 
@@ -112,10 +113,8 @@ void* pool_alloc_allocate(
             n = size + align;
         // => n >= size + align
 
-        SIZE_ADD_EQ(n, sizeof(struct pool_alloc_node_t));
-        // => n >= size + align
-
-        p = malloc(n);
+        ASSERT_SIZE_ADD_NO_OVERFLOW(n, s);
+        p = malloc(n + s);
         ENSURE(p != NULL, "malloc failed");
 
         VERIFY_SIZE_MUL_NO_OVERFLOW(n, SZ(2));
