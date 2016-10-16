@@ -44,6 +44,10 @@ obtained, for to unroll the complete scenario of 'bash' command lines issued
 in a dedicated section. Before reading further on, one should be acquainted
 with the content of the README file first.
 
+First thing one must be aware of reading this document is that it is based on
+the source tree revision identified in Path-Set's git repository by commit hash
+3963fce18b056ba3b2f76ced5c3dfa42d6e4c574 -- PathSet's initial commit.
+
 The tests ran on a GNU/Linux 64-bit Intel x86 CPU machine, on two sets of
 file path names obtained from running 'find' on two private file systems.
 Given the private nature of this data, I will not make this two text files
