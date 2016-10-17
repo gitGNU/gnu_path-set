@@ -77,10 +77,16 @@
 #define SET_STATS_NAME lhash
 #endif // LHASH_NAME
 
-#undef  SET_STATS_NEED_CLOCKS
+#undef  SET_STATS_STRUCT_DECL_CLOCKS
+#define SET_STATS_STRUCT_DECL_CLOCKS() \
+    rehash_time
+
+#define SET_STATS_NEED_CLOCKS
 #define SET_STATS_NEED_NODE_SIZES
 #undef  SET_STATS_NEED_LINE_SIZES
 #include "set-stats-impl.h"
+
+#include "clocks-impl.h"
 
 #endif // LHASH_NEED_STATISTICS
 
@@ -106,15 +112,20 @@ struct LHASH_NODE_TYPE
 };
 
 #ifdef LHASH_NEED_STATISTICS
+
 SET_STATS_STRUCT_DECL(
 #ifdef LHASH_NEED_32BIT_OFFSETS
     node_struct,
     node_mem,
 #endif
+    rehash_op,
     rehash_hit,
     insert_hit,
     insert_ne
 )
+
+#undef SET_STATS_STRUCT_DECL_CLOCKS
+
 #endif // LHASH_NEED_STATISTICS
 
 #ifdef LHASH_NEED_32BIT_OFFSETS
@@ -401,8 +412,16 @@ static void LHASH_REHASH(
     struct LHASH_TYPE* hash)
 {
     typedef LHASH_PTR_TYPE* ptr_t;
+#ifdef LHASH_NEED_STATISTICS
+    struct clocks_t c;
+    struct utime_t u;
+#endif
     ptr_t t, p, e, q;
     size_t h, s;
+
+#ifdef LHASH_NEED_STATISTICS
+    utime_init(&u);
+#endif
 
     LHASH_ASSERT_INVARIANTS(hash);
 
@@ -447,6 +466,11 @@ static void LHASH_REHASH(
     hash->size = s;
     // the new size > the old size =>
     // the invariants are preserved
+#ifdef LHASH_NEED_STATISTICS
+    c = utime_clocks(&u);
+    clocks_add(&hash->stats.rehash_time, &c);
+    hash->stats.rehash_op ++;
+#endif
 }
 
 static bool LHASH_INSERT(
