@@ -100,10 +100,35 @@ CASE(size,
 "the path element hash set structure"
 )
 CASE(size,
+ elem_rehash_op,
+"elem-rehash-op",
+"the number of times rehashed\n"
+"the path element hash set structure"
+)
+CASE(size,
  elem_rehash_hit,
 "elem-rehash-hit",
 "the number of entries hit rehashing in\n"
 "the path element set structure"
+)
+CASE(clocks,
+ elem_rehash_time,
+"elem-rehash-time",
+"the total %s time in microseconds spent\n"
+"rehashing the path element set structure"
+)
+CASE(size,
+ elem_realloc_op,
+"elem-realloc-op",
+"the number of times called for 'realloc(3)' in\n"
+"the allocator of path element set structure"
+)
+CASE(clocks,
+ elem_realloc_time,
+"elem-realloc-time",
+"the total %s time in microseconds spent in\n"
+"'realloc(3)' in the allocator of path element\n"
+"set structure"
 )
 CASE(size,
  node_insert_eq,
@@ -148,10 +173,34 @@ CASE(size,
 "the main hash set structure"
 )
 CASE(size,
+ node_rehash_op,
+"node-rehash-op",
+"the number of times rehashed\n"
+"the main set structure"
+)
+CASE(size,
  node_rehash_hit,
 "node-rehash-hit",
 "the number of entries hit rehashing in\n"
 "the main set structure"
+)
+CASE(clocks,
+ node_rehash_time,
+"node-rehash-time",
+"the total %s time in microseconds spent\n"
+"rehashing the main set structure"
+)
+CASE(size,
+ node_realloc_op,
+"node-realloc-op",
+"the number of times called for 'realloc(3)' in\n"
+"the allocator of main set structure"
+)
+CASE(clocks,
+ node_realloc_time,
+"node-realloc-time",
+"the total %s time in microseconds spent in\n"
+"'realloc(3)' in the allocator of main set structure"
 )
 CASE(size,
  hash_size,
