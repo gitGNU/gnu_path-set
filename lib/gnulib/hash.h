@@ -105,6 +105,8 @@ void *hash_delete (Hash_table *, const void *);
 
 #ifdef _GL_HASH_NEED_STATS_INFO
 
+#include "clocks.h"
+
 struct hash_stats_info
   {
     size_t size;
@@ -115,6 +117,9 @@ struct hash_stats_info
     size_t insert_ne;
     size_t rehash_eq;
     size_t rehash_ne;
+    size_t rehash_op;
+    struct clocks_t
+           rehash_time;
   };
 
 typedef struct hash_stats_info Hash_stats_info;

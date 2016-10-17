@@ -32,6 +32,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef _GL_HASH_NEED_STATS_INFO
+#include "clocks-impl.h"
+#endif
+
 #if USE_OBSTACK
 # include "obstack.h"
 # ifndef obstack_chunk_alloc
@@ -66,6 +70,8 @@ struct hash_table
     size_t n_insert_equal_hits;
     size_t n_rehash_not_equal_hits;
     size_t n_rehash_equal_hits;
+    size_t n_rehash_ops;
+    struct clocks_t rehash_time;
 #endif /* _GL_HASH_NEED_STATS_INFO */
 
     /* Tuning arguments, kept in a physically separate structure.  */
@@ -596,6 +602,8 @@ hash_initialize (size_t candidate, const Hash_tuning *tuning,
   table->n_insert_equal_hits = 0;
   table->n_rehash_not_equal_hits = 0;
   table->n_rehash_equal_hits = 0;
+  table->n_rehash_ops = 0;
+  memset(&table->rehash_time, 0, sizeof(table->rehash_time));
 #endif /* _GL_HASH_NEED_STATS_INFO */
 
   table->hasher = hasher;
@@ -959,6 +967,14 @@ transfer_entries (Hash_table *dst, Hash_table *src, bool safe)
   return true;
 }
 
+#ifndef _GL_HASH_NEED_STATS_INFO
+#define HASH_REHASH_RETURN(v) \
+	do { return v; } while (0)
+#else
+#define HASH_REHASH_RETURN(v) \
+	do { result = v; goto out; } while (0)
+#endif
+
 /* For an already existing hash table, change the number of buckets through
    specifying CANDIDATE.  The contents of the hash table are preserved.  The
    new number of buckets is automatically selected so as to _guarantee_ that
@@ -970,6 +986,11 @@ transfer_entries (Hash_table *dst, Hash_table *src, bool safe)
 bool
 hash_rehash (Hash_table *table, size_t candidate)
 {
+#ifdef _GL_HASH_NEED_STATS_INFO
+  struct clocks_t clocks;
+  struct utime_t utime;
+  bool result;
+#endif
   Hash_table storage;
   Hash_table *new_table;
   size_t new_size = compute_bucket_size (candidate, table->tuning);
@@ -978,10 +999,15 @@ hash_rehash (Hash_table *table, size_t candidate)
     return false;
   if (new_size == table->n_buckets)
     return true;
+
+#ifdef _GL_HASH_NEED_STATS_INFO
+  utime_init (&utime);
+#endif
+
   new_table = &storage;
   new_table->bucket = calloc (new_size, sizeof *new_table->bucket);
   if (new_table->bucket == NULL)
-    return false;
+    HASH_REHASH_RETURN (false);
   new_table->n_buckets = new_size;
   new_table->bucket_limit = new_table->bucket + new_size;
   new_table->n_buckets_used = 0;
@@ -1021,7 +1047,7 @@ hash_rehash (Hash_table *table, size_t candidate)
       table->n_buckets_used = new_table->n_buckets_used;
       table->free_entry_list = new_table->free_entry_list;
       /* table->n_entries and table->entry_stack already hold their value.  */
-      return true;
+      HASH_REHASH_RETURN (true);
     }
 
   /* We've allocated new_table->bucket (and possibly some entries),
@@ -1043,7 +1069,19 @@ hash_rehash (Hash_table *table, size_t candidate)
     abort ();
   /* table->n_entries already holds its value.  */
   free (new_table->bucket);
+
+#ifndef _GL_HASH_NEED_STATS_INFO
   return false;
+#else
+  result = false;
+
+out:
+  clocks = utime_clocks (&utime);
+  clocks_add (&table->rehash_time, &clocks);
+  table->n_rehash_ops ++;
+
+  return result;
+#endif
 }
 
 /* Insert ENTRY into hash TABLE if there is not already a matching entry.
@@ -1217,6 +1255,8 @@ hash_get_stats_info (const Hash_table *table, Hash_stats_info *info)
   info->insert_ne = table->n_insert_not_equal_hits;
   info->rehash_eq = table->n_rehash_equal_hits;
   info->rehash_ne = table->n_rehash_not_equal_hits;
+  info->rehash_op = table->n_rehash_ops;
+  info->rehash_time = table->rehash_time;
 }
 
 size_t
