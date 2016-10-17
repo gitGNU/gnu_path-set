@@ -44,8 +44,8 @@
 // https://groups.google.com/forum/message/raw?msg=comp.std.c/d-6Mj5Lko_s/5R6bMWTEbzQJ
 
 #define SET_STATS_STRUCT_DECL_NARGS___() \
-    8, 7, 6, 5, 4, 3, 2, 1, 0
-#define SET_STATS_STRUCT_DECL_NARGS__(_1, _2, _3, _4, _5, _6, _7, _8, N, ...) \
+    16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
+#define SET_STATS_STRUCT_DECL_NARGS__(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, N, ...) \
     N
 #define SET_STATS_STRUCT_DECL_NARGS_(...) \
     SET_STATS_STRUCT_DECL_NARGS__(__VA_ARGS__)
@@ -70,6 +70,22 @@
     SET_STATS_STRUCT_DECL_REPEAT_6(m, __VA_ARGS__) m(6, __VA_ARGS__)
 #define SET_STATS_STRUCT_DECL_REPEAT_8(m, ...) \
     SET_STATS_STRUCT_DECL_REPEAT_7(m, __VA_ARGS__) m(7, __VA_ARGS__)
+#define SET_STATS_STRUCT_DECL_REPEAT_9(m, ...) \
+    SET_STATS_STRUCT_DECL_REPEAT_8(m, __VA_ARGS__) m(8, __VA_ARGS__)
+#define SET_STATS_STRUCT_DECL_REPEAT_10(m, ...) \
+    SET_STATS_STRUCT_DECL_REPEAT_9(m, __VA_ARGS__) m(9, __VA_ARGS__)
+#define SET_STATS_STRUCT_DECL_REPEAT_11(m, ...) \
+    SET_STATS_STRUCT_DECL_REPEAT_10(m, __VA_ARGS__) m(10, __VA_ARGS__)
+#define SET_STATS_STRUCT_DECL_REPEAT_12(m, ...) \
+    SET_STATS_STRUCT_DECL_REPEAT_11(m, __VA_ARGS__) m(11, __VA_ARGS__)
+#define SET_STATS_STRUCT_DECL_REPEAT_13(m, ...) \
+    SET_STATS_STRUCT_DECL_REPEAT_12(m, __VA_ARGS__) m(12, __VA_ARGS__)
+#define SET_STATS_STRUCT_DECL_REPEAT_14(m, ...) \
+    SET_STATS_STRUCT_DECL_REPEAT_13(m, __VA_ARGS__) m(13, __VA_ARGS__)
+#define SET_STATS_STRUCT_DECL_REPEAT_15(m, ...) \
+    SET_STATS_STRUCT_DECL_REPEAT_14(m, __VA_ARGS__) m(14, __VA_ARGS__)
+#define SET_STATS_STRUCT_DECL_REPEAT_16(m, ...) \
+    SET_STATS_STRUCT_DECL_REPEAT_15(m, __VA_ARGS__) m(15, __VA_ARGS__)
 
 #define SET_STATS_STRUCT_DECL_REPEAT__(n, m, ...) \
     SET_STATS_STRUCT_DECL_REPEAT_ ## n(m, __VA_ARGS__)
@@ -90,6 +106,14 @@
 #define SET_STATS_STRUCT_DECL_SELECT_6(_0, _1, _2, _3, _4, _5, _6, ...) _6
 #define SET_STATS_STRUCT_DECL_SELECT_7(_0, _1, _2, _3, _4, _5, _6, _7, ...) _7
 #define SET_STATS_STRUCT_DECL_SELECT_8(_0, _1, _2, _3, _4, _5, _6, _7, _8, ...) _8
+#define SET_STATS_STRUCT_DECL_SELECT_9(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, ...) _9
+#define SET_STATS_STRUCT_DECL_SELECT_10(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, ...) _10
+#define SET_STATS_STRUCT_DECL_SELECT_11(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, ...) _11
+#define SET_STATS_STRUCT_DECL_SELECT_12(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, ...) _12
+#define SET_STATS_STRUCT_DECL_SELECT_13(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, ...) _13
+#define SET_STATS_STRUCT_DECL_SELECT_14(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, ...) _14
+#define SET_STATS_STRUCT_DECL_SELECT_15(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, ...) _15
+#define SET_STATS_STRUCT_DECL_SELECT_16(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, ...) _16
 
 #define SET_STATS_STRUCT_DECL_SELECT(i, ...) \
     SET_STATS_STRUCT_DECL_SELECT_ ## i(__VA_ARGS__)
