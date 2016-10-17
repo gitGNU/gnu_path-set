@@ -38,6 +38,8 @@
 #define OBJ_ALLOC_TYPE      OBJ_ALLOC_MAKE_NAME(t)
 #define OBJ_ALLOC_NODE_TYPE OBJ_ALLOC_MAKE_NAME(node_t)
 
+#define OBJ_ALLOC_STATS_TYPE OBJ_ALLOC_MAKE_NAME(stats_t)
+
 #define OBJ_ALLOC_INIT      OBJ_ALLOC_MAKE_NAME(init)
 #define OBJ_ALLOC_DONE      OBJ_ALLOC_MAKE_NAME(done)
 
@@ -72,6 +74,18 @@
 
 #define OBJ_ALLOC_OFFSET_MASK OBJ_ALLOC_OFFSET_MAX
 
+#ifdef OBJ_ALLOC_NEED_STATISTICS
+
+#include "clocks-impl.h"
+
+struct OBJ_ALLOC_STATS_TYPE
+{
+    size_t          realloc_op;
+    struct clocks_t realloc_time;
+};
+
+#endif // OBJ_ALLOC_NEED_STATISTICS
+
 // stev: note that the semantics of 'size' and 'used'
 // in the struct 'OBJ_ALLOC_NODE_TYPE' below depends
 // on 'OBJ_ALLOC_OBJ_SIZE' being defined or not:
@@ -102,8 +116,13 @@ struct OBJ_ALLOC_TYPE
 {
     struct OBJ_ALLOC_NODE_TYPE nodes[
         OBJ_ALLOC_NODE_SIZE];
+
     size_t init_size;
     size_t max_size;
+
+#ifdef OBJ_ALLOC_NEED_STATISTICS
+    struct OBJ_ALLOC_STATS_TYPE stats;
+#endif
 };
 
 #define OBJ_ALLOC_ASSERT_INVARIANTS(a, n)   \
@@ -187,6 +206,10 @@ static void* OBJ_ALLOC_ALLOCATE(
     uint32_t* result)
 {
     struct OBJ_ALLOC_NODE_TYPE* p;
+#ifdef OBJ_ALLOC_NEED_STATISTICS
+    struct clocks_t c;
+    struct utime_t t;
+#endif
 #ifndef OBJ_ALLOC_OBJ_SIZE
     bool f = false;
     size_t a, n;
@@ -298,11 +321,17 @@ static void* OBJ_ALLOC_ALLOCATE(
             s = alloc->max_size;
         // => p->size < s <= alloc->max_size
 
+#ifdef OBJ_ALLOC_NEED_STATISTICS
+        utime_init(&t);
+#endif
 #ifndef OBJ_ALLOC_OBJ_SIZE
         p->base = realloc(p->base, s);
 #else
         ASSERT_SIZE_MUL_NO_OVERFLOW(s, OBJ_ALLOC_OBJ_SIZE);
         p->base = realloc(p->base, s * OBJ_ALLOC_OBJ_SIZE);
+#endif
+#ifdef OBJ_ALLOC_NEED_STATISTICS
+        c = utime_clocks(&t);
 #endif
         ENSURE(p->base != NULL, "realloc failed");
 
@@ -312,6 +341,10 @@ static void* OBJ_ALLOC_ALLOCATE(
             "realloc alignment failed");
 #endif
 
+#ifdef OBJ_ALLOC_NEED_STATISTICS
+        clocks_add(&alloc->stats.realloc_time, &c);
+        alloc->stats.realloc_op ++;
+#endif
         p->size = s;
         // => p->size <= alloc->max_size and
         //    p->size increased strictly
