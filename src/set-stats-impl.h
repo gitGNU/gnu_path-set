@@ -123,12 +123,14 @@
 #define SET_STATS_STRUCT_DECL_SIZET(i, ...) \
     size_t SET_STATS_STRUCT_DECL_SELECT(i, __VA_ARGS__);
 
+#ifndef SET_STATS_STRUCT_DECL_CLOCKS
 #if 0
 #define SET_STATS_STRUCT_DECL_CLOCKS() \
     insert_time, lookup_time
 #else
 #define SET_STATS_STRUCT_DECL_CLOCKS() \
     insert_time
+#endif
 #endif
 
 #ifdef  SET_STATS_NEED_NODE_SIZES
