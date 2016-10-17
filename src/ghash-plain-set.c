@@ -147,6 +147,8 @@ void ghash_plain_set_print_stats(
         FSIZE(node_insert_ne,   impl.stats.insert_ne),
         FSIZE(node_rehash_eq,   impl.stats.rehash_eq),
         FSIZE(node_rehash_ne,   impl.stats.rehash_ne),
+        FSIZE(node_rehash_op,   impl.stats.rehash_op),
+        FTIME(node_rehash_time, impl.stats.rehash_time),
         FSIZE(hash_size,        impl.stats.size),
         FSIZE(hash_used,        impl.stats.used),
         FFUNC(hash_load,        ghash_plain_set_get_param_hash_load),

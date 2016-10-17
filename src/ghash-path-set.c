@@ -206,10 +206,16 @@ void ghash_path_set_print_stats(
         FSIZE(node_insert_eq,   impl.stats.insert_eq),
         FSIZE(node_insert_lt,   impl.stats.insert_lt),
         FSIZE(node_insert_gt,   impl.stats.insert_gt),
+#ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
+        FSIZE(node_realloc_op,  impl.node_alloc.stats.realloc_op),
+        FTIME(node_realloc_time,impl.node_alloc.stats.realloc_time),
+#endif
         FSIZE(elem_insert_eq,   impl.elem_set.stats.insert_eq),
         FSIZE(elem_insert_ne,   impl.elem_set.stats.insert_ne),
         FSIZE(elem_rehash_eq,   impl.elem_set.stats.rehash_eq),
         FSIZE(elem_rehash_ne,   impl.elem_set.stats.rehash_ne),
+        FSIZE(elem_rehash_op,   impl.elem_set.stats.rehash_op),
+        FTIME(elem_rehash_time, impl.elem_set.stats.rehash_time),
         FSIZE(hash_size,        impl.elem_set.stats.size),
         FSIZE(hash_used,        impl.elem_set.stats.used),
         FFUNC(hash_load,        ghash_path_set_get_param_hash_load),
