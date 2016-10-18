@@ -1104,7 +1104,7 @@ void stat_params_print(
 {
     const struct stat_param_info_t *p, *e;
     const struct stat_param_desc_t* d;
-    const size_t M = 22;
+    const size_t M = obj ? 22 : 0;
     size_t m = M, l, w;
 
     for (p = params, e = p + len; p < e; p ++) {
