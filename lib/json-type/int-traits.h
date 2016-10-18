@@ -199,6 +199,9 @@
 #define SIZE_INC(x) SIZE_UN_OP(ASSERT, INC, +1, x)
 #define SIZE_DEC(x) SIZE_UN_OP(ASSERT, DEC, -1, x)
 
+#define VERIFY_SIZE_INC(x) SIZE_UN_OP(VERIFY, INC, +1, x)
+#define VERIFY_SIZE_DEC(x) SIZE_UN_OP(VERIFY, DEC, -1, x)
+
 #define SIZE_BIN_OP(m, n, op, x, y)   \
     ({                                \
         SIZE_NO_OVERFLOW(m, n, x, y); \
@@ -212,6 +215,14 @@
 #define SIZE_SUB_EQ(x, y) SIZE_BIN_OP(ASSERT, SUB, -=, x, y)
 #define SIZE_ADD_EQ(x, y) SIZE_BIN_OP(ASSERT, ADD, +=, x, y)
 #define SIZE_MUL_EQ(x, y) SIZE_BIN_OP(ASSERT, MUL, *=, x, y)
+
+#define VERIFY_SIZE_SUB(x, y) SIZE_BIN_OP(VERIFY, SUB, -, x, y)
+#define VERIFY_SIZE_ADD(x, y) SIZE_BIN_OP(VERIFY, ADD, +, x, y)
+#define VERIFY_SIZE_MUL(x, y) SIZE_BIN_OP(VERIFY, MUL, *, x, y)
+
+#define VERIFY_SIZE_SUB_EQ(x, y) SIZE_BIN_OP(VERIFY, SUB, -=, x, y)
+#define VERIFY_SIZE_ADD_EQ(x, y) SIZE_BIN_OP(VERIFY, ADD, +=, x, y)
+#define VERIFY_SIZE_MUL_EQ(x, y) SIZE_BIN_OP(VERIFY, MUL, *=, x, y)
 
 #define SIZE_PRE_OP(m, n, op, x)   \
     ({                             \
@@ -229,6 +240,12 @@
 
 #define SIZE_POST_INC(x) SIZE_POST_OP(ASSERT, INC, ++, x)
 #define SIZE_POST_DEC(x) SIZE_POST_OP(ASSERT, DEC, --, x)
+
+#define VERIFY_SIZE_PRE_INC(x) SIZE_PRE_OP(VERIFY, INC, ++, x)
+#define VERIFY_SIZE_PRE_DEC(x) SIZE_PRE_OP(VERIFY, DEC, --, x)
+
+#define VERIFY_SIZE_POST_INC(x) SIZE_POST_OP(VERIFY, INC, ++, x)
+#define VERIFY_SIZE_POST_DEC(x) SIZE_POST_OP(VERIFY, DEC, --, x)
 
 #define SIZE_MIN2(x, y)             \
     (                               \
