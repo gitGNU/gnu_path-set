@@ -152,7 +152,7 @@ size_t pool_alloc_get_struct_mem(
     const struct pool_alloc_t* alloc)
 {
     const struct pool_alloc_node_t* p;
-    size_t r;
+    size_t r = 0;
 
     ASSERT_POOL_ALLOC_INVARIANTS(alloc);
 
