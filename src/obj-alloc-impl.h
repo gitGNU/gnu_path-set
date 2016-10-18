@@ -302,8 +302,8 @@ static void* OBJ_ALLOC_ALLOCATE(
         // in both cases have that: p->size < s
 #else
         ASSERT(s > 0);
-        while (SIZE_SUB(s, p->used) < n)
-            SIZE_MUL_EQ(s, SZ(2));
+        while (VERIFY_SIZE_SUB(s, p->used) < n)
+            VERIFY_SIZE_MUL_EQ(s, SZ(2));
         // => s - p->used >= n
 
         // also have that p->size < s:
@@ -327,7 +327,7 @@ static void* OBJ_ALLOC_ALLOCATE(
 #ifndef OBJ_ALLOC_OBJ_SIZE
         p->base = realloc(p->base, s);
 #else
-        ASSERT_SIZE_MUL_NO_OVERFLOW(s, OBJ_ALLOC_OBJ_SIZE);
+        VERIFY_SIZE_MUL_NO_OVERFLOW(s, OBJ_ALLOC_OBJ_SIZE);
         p->base = realloc(p->base, s * OBJ_ALLOC_OBJ_SIZE);
 #endif
 #ifdef OBJ_ALLOC_NEED_STATISTICS

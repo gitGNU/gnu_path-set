@@ -218,10 +218,10 @@ static bool lhash_is_prime(size_t n)
     while (s < n && (n % d)) {
         // (a + 2) ^ 2 = a^2 + 4*(a + 1)
         // invariant: s == d^2
-        ASSERT_SIZE_ADD_NO_OVERFLOW(d, SZ(2));
+        VERIFY_SIZE_ADD_NO_OVERFLOW(d, SZ(2));
         d ++;
-        i = SIZE_MUL(d, SZ(4));
-        SIZE_ADD_EQ(s, i);
+        i = VERIFY_SIZE_MUL(d, SZ(4));
+        VERIFY_SIZE_ADD_EQ(s, i);
         d ++;
     }
     return s >= n;
@@ -433,7 +433,7 @@ static void LHASH_REHASH(
     s = lhash_next_prime(
         SIZE_MUL_FLOAT(hash->size,
             LHASH_GROWTH_FACTOR));
-    ASSERT(s > hash->size);
+    VERIFY(s > hash->size);
 
     t = calloc(s, sizeof(LHASH_PTR_TYPE));
     ENSURE(t != NULL, "calloc failed");

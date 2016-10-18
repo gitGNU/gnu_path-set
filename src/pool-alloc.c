@@ -113,7 +113,7 @@ void* pool_alloc_allocate(
             n = size + align;
         // => n >= size + align
 
-        ASSERT_SIZE_ADD_NO_OVERFLOW(n, s);
+        VERIFY_SIZE_ADD_NO_OVERFLOW(n, s);
         p = malloc(n + s);
         ENSURE(p != NULL, "malloc failed");
 
