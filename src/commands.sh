@@ -1579,7 +1579,8 @@ path-set-test-grep()
 
     local P0=() # stev: '-p|--stat-NAME=ARG' names
     local P1=() # stev: '-p|--stat-NAME=ARG' args
-    local P2=0  # stev: '-p|--stat-NAME=+' count
+    local P2=0  # stev: '-p|--stat-NAME-time=+' count
+    local P3=0  # stev: '-p|--stat-NAME-mem=+' count
     local p2=''
 
     local v
@@ -1742,7 +1743,7 @@ path-set-test-grep()
                 [[ -n "$OPT" || \
                     "$OPTARG" =~ ^(${stal// /|})(=$perx)?$ || \
                     "$OPTARG" =~ ^(${stal// /|})=\+$ && \
-                    "${OPTARG:$((${#OPTARG} - 6))}" == '-mem=+' ]] || {
+                    "$OPTARG" =~ -(mem|time)=\+$ ]] || {
                     error -i
                     return 1
                 }
@@ -1753,7 +1754,7 @@ path-set-test-grep()
                     return 1
                 }
                 [[ -z "$OPTN" || "$OPTARG" =~ ^$perx$ || \
-                    "${OPT:$((${#OPT} - 4))}" == '-mem' && \
+                    "$OPT" =~ -(mem|time)$ && \
                     "$OPTARG" == '+' ]] || {
                     error --long -i
                     return 1
@@ -1764,14 +1765,19 @@ path-set-test-grep()
                 v=''
                 [ -n "$OPTN" ] && {
                     P0[${#P0[@]}]="${OPT:5}$v%"
-                    P1[${#P1[@]}]="$OPTARG"
+                    if [[ "$OPTARG" == '+' && "$OPT" =~ -time$ ]]; then
+                        P1[${#P1[@]}]="+${OPT:5}"
+                        (( P2 ++ ))
+                    else
+                        P1[${#P1[@]}]="$OPTARG"
+                    fi
                 }
                 p+="${p:+ }${OPT:5}"
-                [[ -n "$OPTN" && "$OPTARG" == '+' ]] && {
+                [[ -n "$OPTN" && "$OPTARG" == '+' && "$OPT" =~ -mem$ ]] && {
                     P0[${#P0[@]}]="${OPT:5}$v%%"
                     P1[${#P1[@]}]="+${OPT:5}"
                     p+="${p:+ }${OPT:5}"
-                    (( P2 ++ ))
+                    (( P3 ++ ))
                 }
                 ;;
             *)	error --long -g
@@ -1844,34 +1850,52 @@ path-set-test-grep()
                     ? "%.1f%s" : "%lu%s", \
                     q, U[i])
             }'
+    local sf='
+            function float(x)
+            { return sprintf("%.02f", x) }'
 
     local c
     local k
 
-    if [ "$P2" -gt 0 ]; then
-        local a="$sn"'
+    if [ "$P2" -gt 0 -o "$P3" -gt 0 ]; then
+        local a="$sn$sf"'
+            BEGIN {
+                n = split(col, C, ",")
+                for (i = 1; i <= n; i ++) {
+                    F[i] = C[i] !~ /-mem$/
+                }
+            }
             {
                 if (FNR == 1) {
-                    for (k = 1; k <= NF; k ++) {
-                        if ($k == col)
-                            break 
-                    }
-                    if (k > NF) {
-                        printf("'$self': error: internal: " \
-                            "column \x27%s\x27 not found\n", col) \
-                            > "/dev/stderr"
-                        error = 1
-                        exit 1
+                    for (i = 1; i <= n; i ++) {
+                        for (k = 1; k <= NF; k ++) {
+                            if ($k == C[i])
+                                break 
+                        }
+                        if (k > NF) {
+                            printf("'$self': error: internal: " \
+                                "column \x27%s\x27 not found\n", C[i]) \
+                                > "/dev/stderr"
+                            error = 1
+                            exit 1
+                        }
+                        C[i] = k
                     }
                 }
                 else {
-                    s += $k
-                    n ++
+                    for (i = 1; i <= n; i ++) {
+                        S[i] += $(C[i])
+                        N[i] ++
+                    }
                 }
             }
             END {
-                if (!error)
-                    print n ? num(s / n) : 0
+                if (!error) {
+                    for (i = 1; i <= n; i ++) {
+                        v = N[i] ? S[i] / N[i] : 0
+                        print F[i] ? float(v) : num(v)
+                    }
+                }
             }'
 
         local A=''
@@ -1903,16 +1927,24 @@ path-set-test-grep()
 set -o pipefail &&
 $self -Re${A:+ $A}"
 
-        c="\
+        if [ "$P3" -gt 0 ]; then
+            c="\
 $c0 --stat-line-mem|
 awk -F '\t' -v col=line-mem '$a'"
-        [ "$x" == 'echo' ] && echo "$c"
-        v="$(eval "$c")"
-        local r="$?"
-        [ "$r" -eq 0 -o "$r" -eq 141 -o "$r" -eq 123 ] || { #!!!HACKISH
-            error "inner command failed: $self [0]: $r"
-            return 1
-        }
+            [ "$x" == 'echo' ] && echo "$c"
+            v="$(eval "$c")"
+            local r="$?"
+            [ "$r" -eq 0 -o "$r" -eq 141 -o "$r" -eq 123 ] || { #!!!HACKISH
+                error "inner command failed: $self [0]: $r"
+                return 1
+            }
+        else
+            v=''
+        fi
+
+        local i
+        local P4=()
+        local P5=()
 
         for ((k=0; k<${#P1[@]}; k++)); do
             n="${P1[k]}"
@@ -1920,19 +1952,33 @@ awk -F '\t' -v col=line-mem '$a'"
             if [ "${#n}" -eq 1 ]; then
                 P1[$k]="$v"
             else
-                c="\
-$c0 --stat-${n:1} --plain-set --gnulib-hash|
-awk -F '\t' -v col=${n:1} '$a'"
-                [ "$x" == 'echo' ] && echo "$c"
-                v2="$(eval "$c")"
-                r="$?"
-                [ "$r" -eq 0 -o "$r" -eq 141 -o "$r" -eq 123 ] || { #!!!HACKISH
-                    error "inner command failed: $self [1]: $r"
-                    return 1
-                }
-                P1[$k]="$v2"
+                i="${#P4[@]}"
+                P4[$i]="${n:1}"
+                P5[$i]="$k"
             fi
         done
+
+        if [ "${#P4[@]}" -gt 0 ]; then
+            v="${P4[@]}"
+            c="\
+$c0 --stat-${v// / --stat-} --plain-set --gnulib-hash|
+awk -F '\t' -v col='${v// /,}' '$a'"
+            [ "$x" == 'echo' ] && echo "$c"
+            v2="$(eval "$c")"
+            r="$?"
+            [ "$r" -eq 0 -o "$r" -eq 141 -o "$r" -eq 123 ] || { #!!!HACKISH
+                error "inner command failed: $self [1]: $r"
+                return 1
+            }
+            P4=($v2) # stev: do not quote $v3
+            if [ "${#P4[@]}" -ne "${#P5[@]}" ]; then
+                error "inner command failed: $self [1]: unexpected result"
+                return 1
+            fi
+            for ((i=0; i<${#P4[@]}; i++)); do
+                P1[${P5[$i]}]="${P4[$i]}"
+            done
+        fi
     fi
 
     if [[ "$act" == [EFGLMRT] ]]; then
