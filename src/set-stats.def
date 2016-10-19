@@ -88,36 +88,6 @@ CASE(size,
 "the path element set structure"
 )
 CASE(size,
- elem_rehash_eq,
-"elem-rehash-eq",
-"the number of '==' comparisons rehashing in\n"
-"the path element hash set structure"
-)
-CASE(size,
- elem_rehash_ne,
-"elem-rehash-ne",
-"the number of '!=' comparisons rehashing in\n"
-"the path element hash set structure"
-)
-CASE(size,
- elem_rehash_op,
-"elem-rehash-op",
-"the number of times rehashed\n"
-"the path element hash set structure"
-)
-CASE(size,
- elem_rehash_hit,
-"elem-rehash-hit",
-"the number of entries hit rehashing in\n"
-"the path element set structure"
-)
-CASE(clocks,
- elem_rehash_time,
-"elem-rehash-time",
-"the total %s time in microseconds spent\n"
-"rehashing the path element set structure"
-)
-CASE(size,
  elem_realloc_op,
 "elem-realloc-op",
 "the number of times called for 'realloc(3)' in\n"
@@ -161,36 +131,6 @@ CASE(size,
 "the main set structure"
 )
 CASE(size,
- node_rehash_eq,
-"node-rehash-eq",
-"the number of '==' comparisons rehashing in\n"
-"the main hash set structure"
-)
-CASE(size,
- node_rehash_ne,
-"node-rehash-ne",
-"the number of '!=' comparisons rehashing in\n"
-"the main hash set structure"
-)
-CASE(size,
- node_rehash_op,
-"node-rehash-op",
-"the number of times rehashed\n"
-"the main set structure"
-)
-CASE(size,
- node_rehash_hit,
-"node-rehash-hit",
-"the number of entries hit rehashing in\n"
-"the main set structure"
-)
-CASE(clocks,
- node_rehash_time,
-"node-rehash-time",
-"the total %s time in microseconds spent\n"
-"rehashing the main set structure"
-)
-CASE(size,
  node_realloc_op,
 "node-realloc-op",
 "the number of times called for 'realloc(3)' in\n"
@@ -201,6 +141,36 @@ CASE(clocks,
 "node-realloc-time",
 "the total %s time in microseconds spent in\n"
 "'realloc(3)' in the allocator of main set structure"
+)
+CASE(size,
+ rehash_eq,
+"rehash-eq",
+"the number of '==' comparisons rehashing in\n"
+"the hash set structure"
+)
+CASE(size,
+ rehash_ne,
+"rehash-ne",
+"the number of '!=' comparisons rehashing in\n"
+"the hash set structure"
+)
+CASE(size,
+ rehash_op,
+"rehash-op",
+"the number of times rehashed\n"
+"the hash set structure"
+)
+CASE(size,
+ rehash_hit,
+"rehash-hit",
+"the number of entries hit rehashing in\n"
+"the hash set structure"
+)
+CASE(clocks,
+ rehash_time,
+"rehash-time",
+"the total %s time in microseconds spent\n"
+"rehashing the hash set structure"
 )
 CASE(size,
  hash_size,

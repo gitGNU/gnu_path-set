@@ -254,13 +254,13 @@ void lhash_path_set_print_stats(
         FSIZE(elem_insert_eq,   impl.elem_set.stats.insert_eq),
         FSIZE(elem_insert_ne,   impl.elem_set.stats.insert_ne),
         FSIZE(elem_insert_hit,  impl.elem_set.stats.insert_hit),
-        FSIZE(elem_rehash_op,   impl.elem_set.stats.rehash_op),
-        FSIZE(elem_rehash_hit,  impl.elem_set.stats.rehash_hit),
-        FTIME(elem_rehash_time, impl.elem_set.stats.rehash_time),
 #ifdef CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS
         FSIZE(elem_realloc_op,  impl.elem_set.node_alloc.stats.realloc_op),
         FTIME(elem_realloc_time,impl.elem_set.node_alloc.stats.realloc_time),
 #endif
+        FSIZE(rehash_op,        impl.elem_set.stats.rehash_op),
+        FSIZE(rehash_hit,       impl.elem_set.stats.rehash_hit),
+        FTIME(rehash_time,      impl.elem_set.stats.rehash_time),
         FSIZE(hash_size,        impl.elem_set.size),
         FSIZE(hash_used,        impl.elem_set.used),
         FFUNC(hash_load,        lhash_path_set_get_param_hash_load),
