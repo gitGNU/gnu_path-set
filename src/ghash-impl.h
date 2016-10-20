@@ -68,6 +68,7 @@ struct GHASH_TYPE
     GHASH_ALLOC_OBJ_TYPE* alloc_obj;
     struct hash_table* table;
 
+    struct hash_tuning tuning;
 #ifdef GHASH_NEED_STATISTICS
     Hash_stats_info stats;
 #endif
@@ -137,6 +138,12 @@ static bool GHASH_EQ(
 #endif
 }
 
+// stev: gnulib/hash.c: DEFAULT_GROWTH_THRESHOLD
+#define GHASH_REHASH_LOAD 0.8f
+
+// stev: gnulib/hash.c: DEFAULT_GROWTH_FACTOR
+#define GHASH_REHASH_SIZE 1.414f
+
 static void GHASH_INIT(
     struct GHASH_TYPE* hash,
     GHASH_ALLOC_OBJ_TYPE* alloc_obj,
@@ -144,14 +151,29 @@ static void GHASH_INIT(
 {
     memset(hash, 0, sizeof(struct GHASH_TYPE));
 
+    hash->tuning.shrink_threshold = 0.0f;
+    hash->tuning.shrink_factor = 1.0f;
+    hash->tuning.growth_threshold =
+        !isnan(opt->rehash_load)
+        ? opt->rehash_load
+        : GHASH_REHASH_LOAD;
+    hash->tuning.growth_factor =
+        !isnan(opt->rehash_size)
+        ? opt->rehash_size
+        : GHASH_REHASH_SIZE;
+    hash->tuning.is_n_buckets = false;
+
     hash->alloc_obj = alloc_obj;
     hash->table = hash_initialize(
-        opt->hash_size, NULL,
+        opt->hash_size,
+        &hash->tuning,
         (Hash_hasher)
         GHASH_HASH,
         (Hash_comparator)
         GHASH_EQ,
         NULL);
+    ENSURE(hash->table != NULL,
+        "table initialization failed");
 }
 
 static void GHASH_DONE(
