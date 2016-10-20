@@ -1593,6 +1593,7 @@ path-set-test-grep()
     local stax="@(${stal// /|})"
     local meta='[][(){}^$|.?*+\\]'
     local sha1='[0-9a-f]{40}'
+    local defI='input separators'
 
     #
     # 'path-set-test' options
@@ -1636,18 +1637,20 @@ path-set-test-grep()
                     #  F:print formatted table (--[formatted-]table)
     local e=''      # exclude all the 'config-*' parameters from output (--exclude-config)
     local H=''      # print out the test file name for each match (--[with-]filename)
+    local I="$defI" # include the named option as column of the output (cumulative) (`-I?' prints out all names and exit) (--include=NAME)
     local n="="     # negate the next 'path-set-test' command line option (--not)
     local O=""      # define the named 'path-set-test' command line option (`-O?' prints out all names and exit) (--NAME|--NAME=VALUE)
     local p=""      # account for the named 'path-set' stat parameter (cumulative); the value is of form NUM[.NUM][KMG], or is equal to '+' in case NAME is of form '*-mem' (`-p?' prints out all names and exit) (--stat-NAME|--stat-NAME=VALUE)
     local t="+"     # filter for the output of commands of form 'path-set-test --run-test=NUM' -- when action is '-[FLMR]' (default: '1000000') (--[ran-]test=NUM)
     local V=""      # be verbose when action is '-[FLMR]' (--verbose)
+    local X=''      # exclude the named option as column of the output (cumulative) (`-X?' prints out all names and exit) (--exclude=NAME)
 
     local arg='+'
 
     local opt
     local OPT
     local OPTN
-    local opts=":deEFGHLMnO:p:Rt:TVx-:"
+    local opts=":deEFGHI:LMnO:p:Rt:TVxX:-:"
     local OPTARG
     local OPTERR=0
     local OPTIND=1
@@ -1668,6 +1671,8 @@ path-set-test-grep()
                 opt='G' ;;
             with-filename|filename)
                 opt='H' ;;
+            include)
+                opt='I' ;;
             raw-list)
                 opt='L' ;;
             formatted-list|list)
@@ -1686,6 +1691,8 @@ path-set-test-grep()
                 opt='T' ;;
             verbose)
                 opt='V' ;;
+            exclude)
+                opt='X' ;;
             *)	error --long -o
                 return 1
                 ;;
@@ -1819,6 +1826,23 @@ path-set-test-grep()
                     p+="${p:+ }${OPT:5}"
                     (( P3 ++ ))
                 }
+                ;;
+            [IX])
+                [ "$OPTARG" == '?' ] && {
+                    echo -e "${coll// /\\n}"
+                    return 0
+                }
+                [[ "$OPTARG" == @($colx) ]] || {
+                    error --long -i
+                    return 1
+                }
+                if [ "$opt" == 'I' ]; then
+                    [[ "$OPTARG" =~ ^(${I// /|})$ ]] ||
+                    I+="${I:+ }$OPTARG"
+                else
+                    [[ "$OPTARG" =~ ^(${I// /|})$ ]] &&
+                    I="${I/?( )$OPTARG/}"
+                fi
                 ;;
             *)	error --long -g
                 return 1
@@ -2093,7 +2117,7 @@ xargs -r grep -hE '^$sha1$'"
             n
             $ba
             /^#/!b4
-            /^# --(input|separators)=(.*?)\s+\\\s*$/b1
+            /^# --('"${I// /|}"')=(.*?)\s+\\\s*$/b1
             /^# --(plain-set|path-trie)\s+\\\s*$/b2
             /^# --(ternary-tree|linear-hash|gnulib-hash)\s+\\\s*$/b3
             b0
@@ -2164,14 +2188,24 @@ xargs -r ${H:+-I '\$\$' }ssed -nRs '$s2'${H:+ '\$\$'}"
         local s3=''
         local s4=''
 
+        local I2=''
+        local I3="$I"
+        # stev: do not quote $defI below
+        for n in $defI; do
+            [[ "$n" =~ ^(${I// /|})$ ]] && {
+                I3="${I3/?( )$n/}"
+                I2+="${I2:+ }$n"
+            }
+        done
+
         local N=()
         local S=()
         local R0=()
         local R=()
 
         k=0
-        # stev: do not quote $H, $v and $p2 below
-        for n in ${H:+test} ${v//_/-} input separators struct-type set-type $p2; do
+        # stev: do not quote $H, $v, $I2, $I3 and $p2 below
+        for n in ${H:+test} ${v//_/-} $I2 struct-type set-type $I3 $p2; do
             v='+'
             [[ -z "$V" && "$n" != @(${H:+test${p:+|}}${p// /|}) ]] && {
                 n2="${n//-/_}"
