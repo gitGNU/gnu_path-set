@@ -357,6 +357,8 @@ export PATH_SET_TEST_LIMITS='+'
 export PATH_SET_TEST_POOL_SIZE='+'
 export PATH_SET_TEST_HASH_SIZE='+'
 export PATH_SET_TEST_NODE_SIZE='+'
+export PATH_SET_TEST_REHASH_SIZE='+'
+export PATH_SET_TEST_REHASH_LOAD='+'
 export PATH_SET_TEST_STRUCT_TYPE='+'
 export PATH_SET_TEST_SET_TYPE='+'
 export PATH_SET_TEST_SEPARATORS='+'
@@ -368,7 +370,7 @@ path-set-test()
     local cfg0='path-trie-32bit-offsets path-trie-node-32bit-offsets path-trie-elem-32bit-offsets path-trie-uint-hash-identop trie-path-set-print-set value-type-size'
     local cfgl="$cfg0 32bit debug optimize"
     local cfgx="@(${cfgl// /|})"
-    local optl='pool-size hash-size node-size struct-type set-type separators plain-set path-trie ternary-tree linear-hash gnulib-hash'
+    local optl='pool-size hash-size node-size rehash-size rehash-load struct-type set-type separators plain-set path-trie ternary-tree linear-hash gnulib-hash'
     local opnx='@(plain-set|path-trie|ternary-tree|linear-hash|gnulib-hash)'
     local optx="@(${optl// /|})"
     # $ ssed -nR '/^CASE/!b;n;n;s/^\s*"//;s/"\s*,\s*$//;s/^[a-z0-9-]+?-time$/real-\0\nuser-\0\nsys-\0/;p' set-stats.def|ssed -nR 'H;$!b;g;s/^\n//;s/\n/ /g;p'
@@ -378,6 +380,7 @@ path-set-test()
     local nodx="${nodl// /-set|}-set"
     local rngx='^\+$|^[1-9][0-9]*(-[1-9][0-9]*)?$'
     local sizx='^[1-9][0-9]*[kKmM]?$'
+    local flox='^[0-9]+(\.[0-9]+)?$|^\.[0-9]+$|^NAN$'
     local strx='@(plain-set|path-trie)'
     local setx='@(ternary-tree|@(linear|gnulib)-hash)'
     local numx='^\+$|^[1-9][0-9]*$'
@@ -410,6 +413,8 @@ path-set-test()
     local pool_size=''
     local hash_size=''
     local node_size=''
+    local rehash_size=''
+    local rehash_load=''
     local struct_type=''
     local set_type=''
     local separators=''
@@ -417,6 +422,8 @@ path-set-test()
     local def_pool_size='128M'
     local def_hash_size='2M'
     local def_node_size='4M'
+    local def_rehash_size='NAN'
+    local def_rehash_load='NAN'
     local def_struct_type='plain-set'
     local def_set_type='gnulib-hash'
     local def_separators='/'
@@ -603,7 +610,8 @@ path-set-test()
                 ;;
             O)	[[ -z "$OPT" && "$OPTARG" == '?' ]] && {
                     echo -e "${optl// /\\n}"|ssed -R '
-                        s/(?<=-size)$/=NUM[KM]/
+                        /^rehash-size$/!s/(?<=-size)$/=NUM[KM]/
+                        /^rehash-/s/$/=FLOAT/
                         s/(?<=-type)$/=TYPE/
                         s/(?<=^separators)$/=STR/'
                     return 0
@@ -631,6 +639,12 @@ path-set-test()
                 case "${OPT:2}" in
                     pool-size|hash-size|node-size)
                         [[ "$OPTARG" =~ $sizx ]] || {
+                            error --long -i
+                            return 1
+                        }
+                        ;;
+                    rehash-size|rehash-load)
+                        [[ "$OPTARG" =~ $flox ]] || {
                             error --long -i
                             return 1
                         }
@@ -806,6 +820,8 @@ path-set-test()
 BETt:pool_size \
 BETt:hash_size \
 BETt:node_size \
+BETt:rehash_size \
+BETt:rehash_load \
 BNSTt:struct_type \
 BNSTt:set_type \
 BETt:separators;
@@ -835,6 +851,9 @@ BETt:separators;
             pool_size|hash_size|node_size)
                 [[ "$v" =~ $sizx ]] || n=''
                 ;;
+            rehash_size|rehash_load)
+                [[ "$v" =~ $flox ]] || n=''
+                ;;
             struct_type)
                 [[ "$v" == $strx ]] || n=''
                 ;;
@@ -848,8 +867,8 @@ BETt:separators;
         }
         assign2 "$n" v
     done
-    # $pool_size, $hash_size, $node_size, $struct_type
-    # and $set_type need not be quoted, only $separators
+    # $pool_size, $hash_size, $node_size, $rehash_size, $rehash_load,
+    # $struct_type and $set_type need not be quoted, only $separators
     quote2 separators
 
     local S
@@ -1116,7 +1135,7 @@ shuf $i2|head -$arg|
 ./$prog --$struct_type --$set_type -p $pool_size -h $hash_size"
         [ "$v" == 'yes' ] && c+=" \
 -n $node_size"
-        c+=" -t $separators \
+        c+=" -z $rehash_size -l $rehash_load -t $separators \
 -LS"
     elif [ "$act" == "t" ]; then
         test "$s" == '+' && s="$defs"
@@ -1131,6 +1150,8 @@ PATH_SET_TEST_INPUT=$i2}"
 pool_size \
 hash_size \
 node_size \
+rehash_size \
+rehash_load \
 struct_type \
 set_type \
 separators;
@@ -1189,6 +1210,8 @@ PATH_SET_TEST_INPUT=$i2"
 pool_size \
 hash_size \
 node_size \
+rehash_size \
+rehash_load \
 struct_type \
 set_type \
 separators;
@@ -1409,6 +1432,8 @@ PATH_SET_TEST_LIMITS=$l2"
 pool_size \
 hash_size \
 node_size \
+rehash_size \
+rehash_load \
 separators;
         do
             n2="$(tr '[a-z]' '[A-Z]' <<< "$n")" &&
@@ -1544,9 +1569,11 @@ path-set-test-grep()
     local base='input expr limits'
     local basx="${base// /|}"
     # stev: 'struct-type' and 'set-type' are required to be at the end of $opta
-    local opta='pool-size hash-size node-size separators struct-type set-type'
+    local opta='pool-size hash-size node-size rehash-size rehash-load separators struct-type set-type'
     local optx="${opta// /|}"
     local optn='plain-set path-trie ternary-tree linear-hash gnulib-hash'
+    local coll="$base ${opta/ struct-type set-type}"
+    local colx="${coll// /|}"
     local tstl="$cfgl $base $opta $optn"
     local tstx="@(${tstl// /|})"
     # stev: $stal below is a duplicate of $stal in 'path-set-test' above
@@ -1573,6 +1600,8 @@ path-set-test-grep()
     local pool_size=''                           # string
     local hash_size=''                           # string
     local node_size=''                           # string
+    local rehash_size=''                         # string
+    local rehash_load=''                         # string
     local struct_type=''                         # string
     local set_type=''                            # string
     local separators=''                          # string
@@ -1675,7 +1704,7 @@ path-set-test-grep()
                 ;;
             O)	[[ -z "$OPT" && "$OPTARG" == '?' ]] && {
                     echo -e "${tstl// /\\n}"|ssed -R '
-                        /^(?:config-value-type-size|input|expr|limits|[a-z-]+-(?:size|type)|separators)$/s/$/=STR/'
+                        /^(?:config-value-type-size|input|expr|limits|[a-z-]+-(?:size|load|type)|separators)$/s/$/=STR/'
                     return 0
                 }
                 [[ -n "$OPT" || "${OPTARG%%=*}" == $tstx ]] || {
