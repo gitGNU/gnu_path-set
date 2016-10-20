@@ -184,6 +184,8 @@ struct options_t
 #ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
     size_t                     node_size;
 #endif
+    float                      rehash_size;
+    float                      rehash_load;
     const char*                sep_set;
 
     bits_t                     print_stats: 1;

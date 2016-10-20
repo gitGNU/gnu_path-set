@@ -32,6 +32,7 @@
 #include "common.h"
 #include "clocks.h"
 #include "ptr-traits.h"
+#include "float-traits.h"
 
 const char path_trie_default_sep[] = "/.-";
 
@@ -190,6 +191,12 @@ static void usage()
 #ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
         "  -n|--node-size NUM[KM]   the path trie node table initial size (default 1K)\n"
 #endif
+        "  -z|--rehash-size FLOAT   grow hash table size by specified factor when rehashing;\n"
+        "                             given value must be between 1 and 4; default is NAN,\n"
+        "                             i.e. use the table's default value\n"
+        "  -l|--rehash-load FLOAT   rehash hash table when its load factor reached specified\n"
+        "                             value; must be strictly between 0 and 1; default is NAN,\n"
+        "                             i.e. use the table's default value\n"
         "  -r|--struct-type TYPE    use the specified structure type: any of l|plain-set\n"
         "     --plain-set             or p[ath-trie]; the default is path-trie\n"
         "     --path-trie\n"
@@ -422,6 +429,8 @@ static void dump_options(const struct options_t* opts)
 #ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
         "node-size:   %zu%s\n"
 #endif
+        "rehash-size: %.04f\n"
+        "rehash-load: %.04f\n"
         "sep-set:     %s\n"
         "print-stats: %s\n"
         "verbose:     %s\n"
@@ -445,6 +454,8 @@ static void dump_options(const struct options_t* opts)
         node_su.sz,
         node_su.su,
 #endif
+        opts->rehash_size,
+        opts->rehash_load,
         opts->sep_set
         ? opts->sep_set
         : path_trie_default_sep,
@@ -502,6 +513,27 @@ static size_t parse_num(
     errno = 0;
     STATIC(SIZE_MAX == ULONG_MAX);
     return strtoul(p, (char**) q, b);
+}
+
+static float parse_float(const char* p)
+{
+    char* q;
+    float r;
+
+    if (isspace(*p)) {
+        errno = EINVAL;
+        return NAN;
+    }
+
+    errno = 0;
+    r = strtof(p, &q);
+    ASSERT(q >= p);
+
+    if (q == p || *q) {
+        errno = EINVAL;
+        return NAN;
+    }
+    return r;
 }
 
 // $ . ~/trie-gen/commands.sh
@@ -705,6 +737,27 @@ static size_t parse_su_size_optarg(
     return v;
 }
 
+static float parse_float_optarg(
+    const char* opt_name, const char* opt_arg,
+    float lower, float upper)
+{
+    float v;
+
+    if (!strlen(opt_arg))
+        invalid_opt_arg(opt_name, opt_arg);
+    v = parse_float(opt_arg);
+    if (errno)
+        invalid_opt_arg(opt_name, opt_arg);
+    if (isnan(v))
+        return v;
+    ASSERT(FLOAT_LT(lower, upper));
+#define FLOAT_EPSILON 0.11f
+    if (!FLOAT_GS(v, lower) || !FLOAT_LS(v, upper))
+        illegal_opt_arg(opt_name, opt_arg);
+#undef  FLOAT_EPSILON
+    return v;
+}
+
 static const char* parse_sep_set_optarg(
     const char* opt_name, const char* opt_arg)
 {
@@ -761,6 +814,8 @@ const struct options_t* options(
 #ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
         .node_size   = KB(1),
 #endif
+        .rehash_size = NAN,
+        .rehash_load = NAN,
         .sep_set     = NULL,
         .verbose     = false,
         .argc        = 0,
@@ -784,6 +839,8 @@ const struct options_t* options(
 #endif
         struct_type_opt    = 'r',
         set_type_opt       = 's',
+        rehash_size_opt    = 'z',
+        rehash_load_opt    = 'l',
         sep_set_opt        = 't',
         print_stats_opt    = 'S',
         verbose_opt        = 'V',
@@ -824,6 +881,8 @@ const struct options_t* options(
 #ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
         { "node-size",      1,       0, node_size_opt },
 #endif
+        { "rehash-size",    1,       0, rehash_size_opt },
+        { "rehash-load",    1,       0, rehash_load_opt },
         { "separators",     1,       0, sep_set_opt },
         { "seps",           1,       0, sep_set_opt },
         { "print-stats",    0,       0, print_stats_opt },
@@ -844,7 +903,7 @@ const struct options_t* options(
 #ifdef CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS
         "n:"
 #endif
-        "h:p:r:s:St:Vv";
+        "h:l:p:r:s:St:Vvz:";
 
     struct bits_opts_t {
         bits_t dump: 1;
@@ -936,6 +995,16 @@ const struct options_t* options(
                     MB(32));
             break;
 #endif
+        case rehash_size_opt:
+            opts.rehash_size = 
+                parse_float_optarg("rehash-size", optarg,
+                    1.0f, 4.0f);
+            break;
+        case rehash_load_opt:
+            opts.rehash_load = 
+                parse_float_optarg("rehash-load", optarg,
+                    0.0f, 1.0f);
+            break;
         case sep_set_opt:
             opts.sep_set = 
                 parse_sep_set_optarg("sep-set", optarg);
