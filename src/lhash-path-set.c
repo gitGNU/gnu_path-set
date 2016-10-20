@@ -22,10 +22,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "common.h"
 #include "clocks.h"
 #include "ptr-traits.h"
+#include "float-traits.h"
 #include "pool-alloc.h"
 
 struct path_trie_node_t;

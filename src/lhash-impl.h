@@ -38,6 +38,7 @@
 
 #define LHASH_TYPE          LHASH_MAKE_NAME(t)
 #define LHASH_NODE_TYPE     LHASH_MAKE_NAME(node_t)
+#define LHASH_REHASH_TYPE   LHASH_MAKE_NAME(rehash_t)
 
 #define LHASH_SET_STATS_TYPE LHASH_MAKE_NAME(set_stats_t)
 
@@ -68,6 +69,12 @@
 #ifdef LHASH_NEED_32BIT_OFFSETS
 #define LHASH_PRINT_ONE     LHASH_MAKE_NAME(print_one)
 #endif
+
+struct LHASH_REHASH_TYPE
+{
+    float size;
+    float load;
+};
 
 #ifdef LHASH_NEED_STATISTICS
 
@@ -154,6 +161,7 @@ struct LHASH_TYPE
     size_t size;
     size_t used;
 
+    struct LHASH_REHASH_TYPE    rehash;
 #ifdef LHASH_NEED_STATISTICS
     struct LHASH_SET_STATS_TYPE stats;
 #endif
@@ -247,6 +255,18 @@ static size_t lhash_next_prime(size_t n)
 
 #endif // LHASH_PRIME_FUNCS
 
+// stev: Knuth, TAOCP, vol 3, 3rd edition,
+// 6.4 Hashing, p. 528
+#define LHASH_REHASH_LOAD 0.75f
+
+// stev: double the size of the table
+// each time decided to enlarge it; a
+// variant would be to double its size
+// every second time enlarging it --
+// which amounts to the factor below
+// be sqrt(2) ~= 1.4142f
+#define LHASH_REHASH_SIZE 2.0f
+
 static void LHASH_INIT(
     struct LHASH_TYPE* hash,
 #ifndef LHASH_NEED_32BIT_OFFSETS
@@ -263,6 +283,20 @@ static void LHASH_INIT(
     ENSURE(s <= p, "hash-size %zu > %zu -- "
         "the previous prime of UINT32_MAX", s, p);
 #endif
+
+#define FLOAT_EPSILON 0.1f
+    if (!isnan(opt->rehash_load)) {
+        if (!FLOAT_GS(opt->rehash_load, 0.0f) ||
+            !FLOAT_LS(opt->rehash_load, 1.0f))
+            INVALID_ARG("%f", opt->rehash_load);
+    }
+    if (!isnan(opt->rehash_size)) {
+        if (!FLOAT_GS(opt->rehash_size, 0.0f) ||
+            // stev: this upper-bound is arbitrary!
+            !FLOAT_LE(opt->rehash_size, 4.0f))
+            INVALID_ARG("%f", opt->rehash_size);
+    }
+#undef FLOAT_EPSILON
 
     memset(hash, 0, sizeof(struct LHASH_TYPE));
 
@@ -281,6 +315,13 @@ static void LHASH_INIT(
     ENSURE(hash->table != NULL, "calloc failed");
 
     hash->size = s;
+
+    hash->rehash.size = !isnan(opt->rehash_size)
+        ? opt->rehash_size
+        : LHASH_REHASH_SIZE;
+    hash->rehash.load = !isnan(opt->rehash_load)
+        ? opt->rehash_load
+        : LHASH_REHASH_LOAD;
 }
 
 static void LHASH_DONE(
@@ -379,25 +420,12 @@ static bool LHASH_LOOKUP(
 #define SIZE_MUL_FLOAT(x, f)            \
     ({                                  \
         float __r;                      \
-        STATIC(IS_CONSTANT(f));         \
         STATIC(TYPEOF_IS(f, float));    \
         STATIC(TYPEOF_IS_SIZET(x));     \
-        __r = (float) x * f;            \
+        __r = (float) (x) * (f);        \
         VERIFY(__r < (float) SIZE_MAX); \
         (size_t) __r;                   \
     })
-
-// stev: Knuth, TAOCP, vol 3, 3rd edition,
-// 6.4 Hashing, p. 528
-#define LHASH_GROWTH_THRESHOLD 0.75f
-
-// stev: double the size of the table
-// each time decided to enlarge it; a
-// variant would be to double its size
-// every second time enlarging it --
-// which amounts to the factor below
-// be sqrt(2) ~= 1.4142f
-#define LHASH_GROWTH_FACTOR 2.0f
 
 #ifdef LHASH_NEED_NULL_TERM_KEY
 #define LHASH_KEY_LENGTH(p) \
@@ -432,7 +460,7 @@ static void LHASH_REHASH(
 
     s = lhash_next_prime(
         SIZE_MUL_FLOAT(hash->size,
-            LHASH_GROWTH_FACTOR));
+            hash->rehash.size));
     VERIFY(s > hash->size);
 
     t = calloc(s, sizeof(LHASH_PTR_TYPE));
@@ -508,11 +536,8 @@ static bool LHASH_INSERT(
             p --;
     }
 
-    STATIC(LHASH_GROWTH_THRESHOLD > 0.0f);
-    STATIC(LHASH_GROWTH_THRESHOLD < 1.0f);
-
     s = SIZE_MUL_FLOAT(hash->size,
-            LHASH_GROWTH_THRESHOLD);
+            hash->rehash.load);
     VERIFY(s > 0 && s < hash->size);
     // => s <= hash->size - 1
 
