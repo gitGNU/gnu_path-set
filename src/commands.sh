@@ -450,13 +450,14 @@ path-set-test()
     local q=""      # be quiet -- suppress normal output when action is '-E' or '-T' and output doesn't go to stdout (--quiet)
     local r="+"     # number of times to repeat the 'path-set' command (default: 10) (--repeat=NUM)
     local s="+"     # microseconds to sleep between repeats (default: 100) (--sleep=NUM)
+    local X=""      # exclude the named set type when action is '-E' (cumulative) (--exclude=NAME)
 
     local arg='+'
 
     local opt
     local OPT
     local OPTN
-    local opts=":A:bB:C:dD:e:Ei:l:No:O:p:qr:R:s:St:Tx-:"
+    local opts=":A:bB:C:dD:e:Ei:l:No:O:p:qr:R:s:St:TxX:-:"
     local OPTARG
     local OPTERR=0
     local OPTIND=1
@@ -507,6 +508,8 @@ path-set-test()
                 opt='t' ;;
             run-tests|tests)
                 opt='T' ;;
+            exclude)
+                opt='X' ;;
             *)	error --long -o
                 return 1
                 ;;
@@ -708,6 +711,13 @@ path-set-test()
                     return 1
                 }
                 optarg
+                ;;
+            X)	[[ "$OPTARG" == $setx ]] || {
+                    error --long -i
+                    return 1
+                }
+                [[ "$OPTARG" =~ ^($X)$ ]] ||
+                X+="${X:+|}$OPTARG" 
                 ;;
             *)	error --long -g
                 return 1
@@ -1490,6 +1500,7 @@ time $self"
 --quiet --output=+ --run-tests"
         for n in plain-set path-trie; do
             for n2 in ternary-tree linear-hash gnulib-hash; do
+                [[ -n "$X" && "$n2" =~ ^($X)$ ]] && continue
                 c3="$c2 --$n --$n2"
                 quote2 -i c3
                 c+=$'\n\n'"\
