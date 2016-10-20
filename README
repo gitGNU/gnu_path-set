@@ -824,14 +824,11 @@ in the References section below.)
   $ . src/commands.sh
 
   $ git-repo-diff -g $JSON_TYPE_HOME --json-type|lsdiff -s
+  ! int-traits.h
 
   $ git-repo-diff -g $GNULIB_HOME --gnulib|lsdiff -s
   ! hash.c
   ! hash.h
-
-The first of the two invocations of shell function 'git-repo-diff' produced an
-empty output. This indicates that the source files originating from Json-Type
-were not changed at all.
 
 Note that each of the commands above expects to be issued from within the top
 directory of Path-Set source tree. The command line options of shell function
