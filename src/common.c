@@ -192,10 +192,10 @@ static void usage()
         "  -n|--node-size NUM[KM]   the path trie node table initial size (default 1K)\n"
 #endif
         "  -z|--rehash-size FLOAT   grow hash table size by specified factor when rehashing;\n"
-        "                             given value must be between 1 and 4; default is NAN,\n"
+        "                             FLOAT must be strictly between 1 and 4; default is NAN,\n"
         "                             i.e. use the table's default value\n"
-        "  -l|--rehash-load FLOAT   rehash hash table when its load factor reached specified\n"
-        "                             value; must be strictly between 0 and 1; default is NAN,\n"
+        "  -l|--rehash-load FLOAT   rehash hash table when its load factor reached given value;\n"
+        "                             FLOAT must be strictly between 0 and 1; default is NAN,\n"
         "                             i.e. use the table's default value\n"
         "  -r|--struct-type TYPE    use the specified structure type: any of l|plain-set\n"
         "     --plain-set             or p[ath-trie]; the default is path-trie\n"
