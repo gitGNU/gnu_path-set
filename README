@@ -433,6 +433,8 @@ function accepts the following command line options:
                                      command (default: 10)
     -s|--sleep=NUM                 microseconds to sleep between repeats
                                      (default: 100)
+    -X|--exclude=NAME              exclude the named set type when action is '-E'
+                                     (cumulative)
 
 The input it expects and the output 'path-set-test' produces are controlled by
 the last action option specified in the invoking command line. The `--config-*'
