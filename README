@@ -678,6 +678,8 @@ as follows:
   options:
     -e|--exclude-config     exclude all the 'config-*' parameters from output
     -H|--[with-]filename    print out the test file name for each match
+    -I|--include=NAME       include the named option as column of the output
+                              (cumulative) (`-I?' prints out all names and exit)
     -n|--not                negate the next 'path-set-test' command line option
     -O:|--NAME              define the named 'path-set-test' command line option
         --NAME=VALUE          (`-O?' prints out all names and exit)
@@ -689,6 +691,8 @@ as follows:
                               'path-set-test --run-test=NUM' -- when action is
                               '-[FLMR]' (default: '1000000')
     -V|--verbose            be verbose when action is '-[FLMR]'
+    -X|--exclude=NAME       exclude the named option as column of the output
+                              (cumulative) (`-X?' prints out all names and exit)
 
 The input of 'path-set-test-grep' consists of the SHA1-named test files which
 were produced by 'path-set-test' in the current directory. The output of the
@@ -700,6 +704,23 @@ The output of 'path-set-test-grep' is also controlled by the options of type
 `-O|--NAME|--NAME=VALUE'. The set of this kind of options given in the invoking
 command line composes the grepping criteria based on which 'path-set-test-grep'
 selects the SHA1-named test files for extracting data from.
+
+The names to be included and/or excluded from the set of table column names or,
+by case, list row names produced by the shell script are the following (options
+`-I?' and `-X?' have identical outputs):
+
+  $ path-set-test-grep -I?
+  input
+  expr
+  limits
+  pool-size
+  hash-size
+  node-size
+  rehash-size
+  rehash-load
+  separators
+
+Initially, the set of these names contains 'input' and 'separators'.
 
 The action options of 'path-set-test-grep' produce output as described below:
 
