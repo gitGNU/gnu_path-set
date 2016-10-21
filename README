@@ -741,7 +741,7 @@ will also include a column named 'VALUE' to the right of column named 'NAME'.
 On each line of output, the value on the column 'VALUE' is the percentage of
 *gain* relative to 'VALUE' of the corresponding value on the column 'NAME'.
 
-For each statistics parameter options of form `--stat-NAME=+', the ouput of the
+For options of form `--stat-NAME=+', where 'NAME' ends with '-mem', the ouput of
 shell function 'path-set-test-grep' will include two columns beside each column
 named 'NAME'. The names of these two columns are of form 'NUM[.NUM][KMG]'. The
 first name is the average value of the 'line-mem' stat parameter of 'path-set'
@@ -755,7 +755,7 @@ above for the case of statistics parameter options `--stat-NAME=VALUE', where
 
   $ path-set-test-grep GREPPING_ACTION GREPPING_CRITERIA --stat-NAME=+
 
-will produce the same output as the command:
+where 'NAME' is of form '*-mem', will produce the same output as the command:
 
   $ path-set-test-grep GREPPING_ACTION GREPPING_CRITERIA --stat-NAME={VALUE1,VALUE2}
 
@@ -764,6 +764,24 @@ where 'VALUE1' is the average value on the column 'line-mem' of the output of:
   $ path-set-test-grep -Re GREPPING_CRITERIA --stat-line-mem
 
 and 'VALUE2' is the average value on the column 'NAME' of the output of:
+
+  $ path-set-test-grep -Re GREPPING_CRITERIA --stat-NAME --plain-set --gnulib-hash
+
+For the options of same form `--stat-NAME=+', but where NAME ends with '-time',
+the output of shell function 'path-set-test-grep' will include only one column
+next to the one named 'NAME'. The name of this column is of form 'NUM[.NUM]':
+it is the average of the 'NAME' stat parameter values of 'path-set' relative to
+the grepping criteria that the invoking commmand line defined, criteria further
+restricted to struct type `--plain-set' and set type `--gnulib-hash'. Therefore,
+a command line like:  
+
+  $ path-set-test-grep GREPPING_ACTION GREPPING_CRITERIA --stat-NAME=+
+
+where 'NAME' is of form '*-time', will produce the same output as the command:
+
+  $ path-set-test-grep GREPPING_ACTION GREPPING_CRITERIA --stat-NAME=VALUE
+
+where 'VALUE' is the average value on the column 'NAME' of the output of:
 
   $ path-set-test-grep -Re GREPPING_CRITERIA --stat-NAME --plain-set --gnulib-hash
 
