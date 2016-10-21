@@ -279,6 +279,12 @@ Upon building it, 'path-set' can be asked to produce brief help info on stdout:
     -p|--pool-size NUM[KM]   memory pool initial size (default 128K)
     -h|--hash-size NUM[KM]   by case, the linear hash table or the gnulib
                                hash table initial size (default 1K)
+    -z|--rehash-size FLOAT   grow hash table size by specified factor when rehashing;
+                               FLOAT must be strictly between 1 and 4; default is NAN,
+                               i.e. use the table's default value
+    -l|--rehash-load FLOAT   rehash hash table when its load factor reached given value;
+                               FLOAT must be strictly between 0 and 1; default is NAN,
+                               i.e. use the table's default value
     -r|--struct-type TYPE    use the specified structure type: any of l|plain-set
        --plain-set             or p[ath-trie]; the default is path-trie
        --path-trie
@@ -353,6 +359,8 @@ the runtime options of the program received:
   set-type:    ternary-tree
   pool-size:   128K
   hash-size:   1K
+  rehash-size: nan
+  rehash-load: nan
   sep-set:     /.-
   print-stats: no
   verbose:     no
@@ -452,6 +460,8 @@ The 'path-set' command line options passed in from 'path-set-test' are:
   pool-size=NUM[KM]
   hash-size=NUM[KM]
   node-size=NUM[KM]
+  rehash-size=FLOAT
+  rehash-load=FLOAT
   struct-type=TYPE
   set-type=TYPE
   separators=STR
@@ -469,6 +479,8 @@ line they receive the following default values:
   --pool-size        128M
   --hash-size        2M
   --node-size        4M
+  --rehash-size      NAN
+  --rehash-load      NAN
   --struct-type      plain-set
   --set-type         gnulib-hash
   --separators       '/'
@@ -485,6 +497,8 @@ environment variables:
   --pool-size             PATH_SET_TEST_POOL_SIZE
   --hash-size             PATH_SET_TEST_HASH_SIZE
   --node-size             PATH_SET_TEST_NODE_SIZE
+  --rehash-size           PATH_SET_TEST_REHASH_SIZE
+  --rehash-load           PATH_SET_TEST_REHASH_LOAD
   --struct-type           PATH_SET_TEST_STRUCT_TYPE
   --set-type              PATH_SET_TEST_SET_TYPE
   --separators            PATH_SET_TEST_SEPARATORS
@@ -519,6 +533,8 @@ The action options of 'path-set-test' work as described below:
       `--pool-size',
       `--hash-size',
       `--node-size',
+      `--rehash-size',
+      `--rehash-load',
       `--struct-type',
       `--set-type', and
       `--separators';
@@ -543,6 +559,8 @@ The action options of 'path-set-test' work as described below:
       `--pool-size',
       `--hash-size',
       `--node-size',
+      `--rehash-size',
+      `--rehash-load',
       `--separators',
       `--repeat', and
       `--sleep';
@@ -587,6 +605,8 @@ The action options of 'path-set-test' work as described below:
       `--pool-size',
       `--hash-size',
       `--node-size',
+      `--rehash-size',
+      `--rehash-load',
       `--struct-type',
       `--set-type',
       `--separators',
@@ -607,6 +627,8 @@ The action options of 'path-set-test' work as described below:
       `--pool-size',
       `--hash-size',
       `--node-size',
+      `--rehash-size',
+      `--rehash-load',
       `--struct-type',
       `--set-type', and
       `--separators';
