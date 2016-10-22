@@ -69,7 +69,7 @@ using 32-bit offsets (`--not --config-32bit --config-path-trie-32bit-offsets')
   path-trie    gnulib-hash           18.5M    27%    36%      38.6M   -52%    21%
   plain-set    linear-hash           27.4M    -8%     5%      35.4M   -39%    28%
   plain-set    gnulib-hash           28.9M   -14%     0%      49.1M   -93%     0%
-  
+
   # path-set-test-grep command #3:
   $ path-set-test-grep -Fe \
   --not --ternary-tree --separators='/' --input=tests/files.txt \
@@ -80,7 +80,7 @@ using 32-bit offsets (`--not --config-32bit --config-path-trie-32bit-offsets')
   path-trie    gnulib-hash           26.8M    -5%    16%     143.8M  -466%   -98%
   plain-set    linear-hash           28.9M   -14%    10%      44.9M   -77%    38%
   plain-set    gnulib-hash           32.0M   -26%     0%      72.5M  -185%     0%
-  
+
   # path-set-test-grep command #4:
   $ path-set-test-grep -Fe \
   --not --ternary-tree --separators='/' --input=tests/files2.txt \
@@ -91,7 +91,7 @@ using 32-bit offsets (`--not --config-32bit --config-path-trie-32bit-offsets')
   path-trie    gnulib-hash           36.9M    20%    30%      57.1M   -25%    23%
   plain-set    linear-hash           49.8M    -9%     6%      57.8M   -26%    22%
   plain-set    gnulib-hash           52.9M   -16%     0%      73.9M   -61%     0%
-  
+
   # path-set-test-grep command #6:
   $ path-set-test-grep -Fe \
   --not --ternary-tree --separators='/' --input=tests/files2.txt \
@@ -102,7 +102,7 @@ using 32-bit offsets (`--not --config-32bit --config-path-trie-32bit-offsets')
   plain-set    linear-hash           52.9M   -16%    11%      68.9M   -51%     32%
   path-trie    gnulib-hash           53.4M   -17%    10%     150.5M  -229%    -49%
   plain-set    gnulib-hash           59.3M   -29%     0%     101.1M  -121%      0%
-  
+
 The labels '#[1346]' seen above are paired with those in 'doc/path-set.txt'.
 The fourth and the seventh columns above are containing percents relative to
 the size of the input, i.e. the 'line-mem' stat parameter, which is shown on
@@ -290,7 +290,7 @@ moved to 'tests/2016-10-14' into easily readable table formats:
   '/'         path-trie    ternary-tree           41.2M   -62%   -43%      41.2M   -62%    16%
   '/'         plain-set    ternary-tree           61.0M  -140%  -111%      61.0M  -140%   -24%
   '/.-'       plain-set    ternary-tree           61.0M  -140%  -111%      61.0M  -140%   -24%
-  
+
   # path-set-test-grep command #2:
   $ path-set-test-grep -Fe \
   --input=tests/files.txt --not --config-32bit --not --config-path-trie-32bit-offsets \
@@ -308,7 +308,7 @@ moved to 'tests/2016-10-14' into easily readable table formats:
   '/'         path-trie    ternary-tree           82.4M  -224%  -158%      82.4M  -224%   -14%
   '/'         plain-set    ternary-tree          121.9M  -380%  -281%     121.9M  -380%   -68%
   '/.-'       plain-set    ternary-tree          121.9M  -380%  -281%     121.9M  -380%   -68%
-  
+
   # path-set-test-grep command #3:
   $ path-set-test-grep -Fe \
   --input=tests/files.txt --not --config-32bit --config-path-trie-32bit-offsets \
@@ -326,7 +326,7 @@ moved to 'tests/2016-10-14' into easily readable table formats:
   '/'         path-trie    ternary-tree           76.0M  -199%  -138%     152.9M  -502%  -111%
   '/'         plain-set    ternary-tree          121.9M  -380%  -281%     121.9M  -380%   -68%
   '/.-'       plain-set    ternary-tree          121.9M  -380%  -281%     121.9M  -380%   -68%
-  
+
   # path-set-test-grep command #4:
   $ path-set-test-grep -Fe \
   --input=tests/files2.txt --config-32bit \
@@ -344,7 +344,7 @@ moved to 'tests/2016-10-14' into easily readable table formats:
   '/'         path-trie    ternary-tree           81.4M   -78%   -54%      81.4M   -78%   -10%
   '/'         plain-set    ternary-tree          136.1M  -197%  -157%     136.1M  -197%   -84%
   '/.-'       plain-set    ternary-tree          136.1M  -197%  -157%     136.1M  -197%   -84%
-  
+
   # path-set-test-grep command #5:
   $ path-set-test-grep -Fe \
   --input=tests/files2.txt --not --config-32bit --not --config-path-trie-32bit-offsets \
@@ -362,7 +362,7 @@ moved to 'tests/2016-10-14' into easily readable table formats:
   '/'         path-trie    ternary-tree          162.9M  -256%  -175%     162.9M  -256%    -61%
   '/'         plain-set    ternary-tree          272.3M  -494%  -359%     272.3M  -494%   -169%
   '/.-'       plain-set    ternary-tree          272.3M  -494%  -359%     272.3M  -494%   -169%
-  
+
   # path-set-test-grep command #6:
   $ path-set-test-grep -Fe \
   --input=tests/files2.txt --not --config-32bit --config-path-trie-32bit-offsets \
@@ -380,7 +380,7 @@ moved to 'tests/2016-10-14' into easily readable table formats:
   '/'         path-trie    ternary-tree          149.7M  -227%  -153%     206.3M  -350%   -104%
   '/'         plain-set    ternary-tree          272.3M  -494%  -359%     272.3M  -494%   -169%
   '/.-'       plain-set    ternary-tree          272.3M  -494%  -359%     272.3M  -494%   -169%
-  
+
 Note that the series of 'path-set-test-grep' commands above matches precisely the
 corresponding series in 'doc/path-set.txt'.
 
