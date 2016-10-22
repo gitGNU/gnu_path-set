@@ -1,0 +1,82 @@
+#
+# # meta command:
+# $ path-set-test \
+# --config-path-trie-node-32bit-offsets \
+# --config-path-trie-elem-32bit-offsets \
+# --config-optimize \
+# --input=tests/files.txt \
+# --expr='10 ** x' \
+# --limits=1-6 \
+# --pool-size=1K \
+# --hash-size=1K \
+# --node-size=1K \
+# --rehash-size=1.4142 \
+# --rehash-load=NAN \
+# --separators='/' \
+# --repeat=10 \
+# --sleep=100 \
+# --run-series
+#
+
+$ date
+Thu Oct 20 16:46:54 EEST 2016
+$
+
+$ make -B CONFIG+=PATH_TRIE_NODE_32BIT_OFFSETS CONFIG+=PATH_TRIE_ELEM_32BIT_OFFSETS 32BIT=no DEBUG=no OPT=4
+gcc -Wall -Wextra -std=gnu99 -I. -Ijson-type -Ignulib -DPROGRAM=path-set -DCONFIG_PATH_TRIE_NODE_32BIT_OFFSETS -DCONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS -DOPT=4 -O4 main.c common.c clocks.c set-intf.c pool-alloc.c trie-path-set.c lhash-path-set.c ghash-path-set.c trie-plain-set.c lhash-plain-set.c ghash-plain-set.c gnulib/hash.c -o path-set -lm
+$
+
+$ ./path-set -C
+CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS: yes
+CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS: yes
+CONFIG_PATH_TRIE_UINT_HASH_IDENTOP:  no
+CONFIG_TRIE_PATH_SET_PRINT_SET:      no
+CONFIG_VALUE_TYPE_SIZE:              64
+32BIT:                               no
+DEBUG:                               no
+OPT:                                 4
+$
+
+$ PATH_SET_TEST_INPUT=tests/files.txt
+$ PATH_SET_TEST_EXPR='10 ** x'
+$ PATH_SET_TEST_LIMITS=1-6
+$ PATH_SET_TEST_POOL_SIZE=1K
+$ PATH_SET_TEST_HASH_SIZE=1K
+$ PATH_SET_TEST_NODE_SIZE=1K
+$ PATH_SET_TEST_REHASH_SIZE=1.4142
+$ PATH_SET_TEST_REHASH_LOAD=NAN
+$ PATH_SET_TEST_SEPARATORS='/'
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --linear-hash
+80934ec61c88212512b8c4db2d72c4854e659f38
+
+real	0m15.178s
+user	0m10.589s
+sys	0m3.800s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --gnulib-hash
+b63cabb45d1c1a7793e302ebfab1521e7086aab1
+
+real	0m17.146s
+user	0m12.477s
+sys	0m3.932s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --linear-hash
+6326c1cc44489e6f5ec4f33c02bbd0969ebef048
+
+real	0m20.153s
+user	0m15.321s
+sys	0m4.208s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --gnulib-hash
+c8c227e09616d6a578bdb12f01d6d33415bbe1ee
+
+real	0m22.208s
+user	0m17.517s
+sys	0m4.092s
+$
+

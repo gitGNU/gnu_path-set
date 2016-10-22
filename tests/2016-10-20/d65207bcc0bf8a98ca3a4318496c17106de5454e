@@ -1,0 +1,1093 @@
+#
+# # meta command:
+# $ path-set-test \
+# --input=tests/files2.txt \
+# --expr='10 ** x' \
+# --limits=1-6 \
+# --pool-size=1K \
+# --hash-size=1K \
+# --node-size=1K \
+# --rehash-size=2 \
+# --rehash-load=NAN \
+# --separators='/' \
+# --repeat=10 \
+# --sleep=100 \
+# --path-trie \
+# --linear-hash \
+# --run-tests
+#
+
+$ date +'%Y-%m-%d %H:%M:%S.%N %z'
+2016-10-20 16:58:43.896211923 +0300
+$
+
+$ ./path-set -C
+CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS: yes
+CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS: yes
+CONFIG_PATH_TRIE_UINT_HASH_IDENTOP:  no
+CONFIG_TRIE_PATH_SET_PRINT_SET:      no
+CONFIG_VALUE_TYPE_SIZE:              64
+32BIT:                               no
+DEBUG:                               no
+OPT:                                 4
+$
+
+$ ./path-set --path-trie --linear-hash -I
+node-struct-size: 20
+elem-struct-size: 1
+$
+
+$ ./path-set --path-trie --linear-hash -N
+dups-line
+uniq-line
+line-mem
+dups-node
+uniq-node
+dups-elem
+uniq-elem
+node-insert-eq
+node-insert-lt
+node-insert-gt
+node-realloc-op
+node-realloc-time
+elem-insert-eq
+elem-insert-ne
+elem-insert-hit
+elem-realloc-op
+elem-realloc-time
+rehash-op
+rehash-hit
+rehash-time
+hash-size
+hash-used
+hash-load
+node-struct-size
+elem-struct-size
+node-struct
+elem-struct
+node-mem
+elem-mem
+total-node-mem
+total-mem
+insert-time
+$
+
+$ PATH_SET_TEST_INPUT=tests/files2.txt
+$ PATH_SET_TEST_POOL_SIZE=1K
+$ PATH_SET_TEST_HASH_SIZE=1K
+$ PATH_SET_TEST_NODE_SIZE=1K
+$ PATH_SET_TEST_REHASH_SIZE=2
+$ PATH_SET_TEST_REHASH_LOAD=NAN
+$ PATH_SET_TEST_STRUCT_TYPE=path-trie
+$ PATH_SET_TEST_SET_TYPE=linear-hash
+$ PATH_SET_TEST_SEPARATORS='/'
+$
+
+$ time path-set-test -t 10
+param                   min          max          avg             var               dev            
+dups-line               0            0            0.00            0.00              0.00           
+uniq-line               10           10           10.00           0.00              0.00           
+line-mem                433          631          556.70          3852.61           62.07          
+dups-node               0            0            0.00            0.00              0.00           
+uniq-node               10           10           10.00           0.00              0.00           
+dups-elem               24           32           28.50           7.85              2.80           
+uniq-elem               42           61           51.80           54.16             7.36           
+node-insert-eq          21           30           25.00           7.40              2.72           
+node-insert-lt          4            19           12.30           17.01             4.12           
+node-insert-gt          2            15           6.10            13.49             3.67           
+node-realloc-op         1            1            1.00            0.00              0.00           
+real-node-realloc-time  2            3            2.60            0.24              0.49           
+user-node-realloc-time  0            0            0.00            0.00              0.00           
+sys-node-realloc-time   0            0            0.00            0.00              0.00           
+elem-insert-eq          24           32           28.50           7.85              2.80           
+elem-insert-ne          0            3            1.30            1.21              1.10           
+elem-insert-hit         0            0            0.00            0.00              0.00           
+elem-realloc-op         1            1            1.00            0.00              0.00           
+real-elem-realloc-time  3            4            3.90            0.09              0.30           
+user-elem-realloc-time  0            0            0.00            0.00              0.00           
+sys-elem-realloc-time   0            0            0.00            0.00              0.00           
+rehash-op               0            0            0.00            0.00              0.00           
+rehash-hit              0            0            0.00            0.00              0.00           
+real-rehash-time        0            0            0.00            0.00              0.00           
+user-rehash-time        0            0            0.00            0.00              0.00           
+sys-rehash-time         0            0            0.00            0.00              0.00           
+hash-size               1031         1031         1031.00         0.00              0.00           
+hash-used               42           61           51.80           54.16             7.36           
+hash-load               0.04         0.06         0.05            0.00              0.01           
+node-struct-size        20           20           20.00           0.00              0.00           
+elem-struct-size        1            1            1.00            0.00              0.00           
+node-struct             52           75           65.30           70.41             8.39           
+elem-struct             42           61           51.80           54.16             7.36           
+node-mem                1040         1500         1306.00         28164.00          167.82         
+elem-mem                404          641          542.90          6301.69           79.38          
+total-node-mem          1484         2125         1848.90         59850.89          244.64         
+total-mem               26246        26322        26282.80        866.56            29.44          
+real-insert-time        25           33           29.90           7.29              2.70           
+user-insert-time        0            0            0.00            0.00              0.00           
+sys-insert-time         0            0            0.00            0.00              0.00           
+
+real	0m1.436s
+user	0m0.896s
+sys	0m0.212s
+$
+
+$ time path-set-test -t 100
+param                   min          max          avg             var               dev            
+dups-line               0            0            0.00            0.00              0.00           
+uniq-line               100          100          100.00          0.00              0.00           
+line-mem                5542         6086         5767.60         32995.04          181.65         
+dups-node               0            0            0.00            0.00              0.00           
+uniq-node               100          100          100.00          0.00              0.00           
+dups-elem               456          504          479.40          169.44            13.02          
+uniq-elem               322          374          347.50          180.25            13.43          
+node-insert-eq          389          429          411.30          176.61            13.29          
+node-insert-lt          145          235          199.70          798.81            28.26          
+node-insert-gt          113          206          171.00          584.60            24.18          
+node-realloc-op         1            1            1.00            0.00              0.00           
+real-node-realloc-time  2            4            3.00            0.20              0.45           
+user-node-realloc-time  0            0            0.00            0.00              0.00           
+sys-node-realloc-time   0            0            0.00            0.00              0.00           
+elem-insert-eq          456          504          479.40          169.44            13.02          
+elem-insert-ne          72           117          92.50           207.65            14.41          
+elem-insert-hit         0            0            0.00            0.00              0.00           
+elem-realloc-op         3            4            3.60            0.24              0.49           
+real-elem-realloc-time  7            12           9.10            1.89              1.37           
+user-elem-realloc-time  0            0            0.00            0.00              0.00           
+sys-elem-realloc-time   0            0            0.00            0.00              0.00           
+rehash-op               0            0            0.00            0.00              0.00           
+rehash-hit              0            0            0.00            0.00              0.00           
+real-rehash-time        0            0            0.00            0.00              0.00           
+user-rehash-time        0            0            0.00            0.00              0.00           
+sys-rehash-time         0            0            0.00            0.00              0.00           
+hash-size               1031         1031         1031.00         0.00              0.00           
+hash-used               322          374          347.50          180.25            13.43          
+hash-load               0.31         0.36         0.34            0.00              0.01           
+node-struct-size        20           20           20.00           0.00              0.00           
+elem-struct-size        1            1            1.00            0.00              0.00           
+node-struct             486          539          515.60          213.04            14.60          
+elem-struct             322          374          347.50          180.25            13.43          
+node-mem                9720         10780        10312.00        85216.00          291.92         
+elem-mem                3914         4392         4143.60         16896.64          129.99         
+total-node-mem          13760        15172        14455.60        148902.24         385.88         
+total-mem               28155        32343        30667.40        3982379.04        1995.59        
+real-insert-time        137          183          153.50          284.05            16.85          
+user-insert-time        0            0            0.00            0.00              0.00           
+sys-insert-time         0            0            0.00            0.00              0.00           
+
+real	0m1.401s
+user	0m0.844s
+sys	0m0.232s
+$
+
+$ time path-set-test -t 1000
+param                   min          max          avg             var               dev            
+dups-line               0            0            0.00            0.00              0.00           
+uniq-line               1000         1000         1000.00         0.00              0.00           
+line-mem                56444        59175        57912.90        599073.69         774.00         
+dups-node               0            0            0.00            0.00              0.00           
+uniq-node               1000         1000         1000.00         0.00              0.00           
+dups-elem               5939         6143         6057.10         4904.09           70.03          
+uniq-elem               2118         2192         2163.50         429.65            20.73          
+node-insert-eq          5165         5320         5263.20         3102.56           55.70          
+node-insert-lt          2858         3700         3308.70         64315.81          253.61         
+node-insert-gt          2737         4141         3228.30         150556.41         388.02         
+node-realloc-op         3            3            3.00            0.00              0.00           
+real-node-realloc-time  16           66           28.40           308.84            17.57          
+user-node-realloc-time  0            0            0.00            0.00              0.00           
+sys-node-realloc-time   0            0            0.00            0.00              0.00           
+elem-insert-eq          5939         6143         6057.10         4904.09           70.03          
+elem-insert-ne          4678         5771         5304.00         183764.20         428.68         
+elem-insert-hit         0            2            0.50            0.45              0.67           
+elem-realloc-op         6            6            6.00            0.00              0.00           
+real-elem-realloc-time  14           53           31.70           106.01            10.30          
+user-elem-realloc-time  0            0            0.00            0.00              0.00           
+sys-elem-realloc-time   0            0            0.00            0.00              0.00           
+rehash-op               2            2            2.00            0.00              0.00           
+rehash-hit              642          809          709.70          2794.81           52.87          
+real-rehash-time        94           185          167.10          614.89            24.80          
+user-rehash-time        0            0            0.00            0.00              0.00           
+sys-rehash-time         0            0            0.00            0.00              0.00           
+hash-size               4127         4127         4127.00         0.00              0.00           
+hash-used               2118         2192         2163.50         429.65            20.73          
+hash-load               0.51         0.53         0.52            0.00              0.01           
+node-struct-size        20           20           20.00           0.00              0.00           
+elem-struct-size        1            1            1.00            0.00              0.00           
+node-struct             3885         4008         3957.40         1198.64           34.62          
+elem-struct             2118         2192         2163.50         429.65            20.73          
+node-mem                77700        80160        79148.00        479456.00         692.43         
+elem-mem                28819        30218        29526.60        154112.44         392.57         
+total-node-mem          106519       109278       108674.60       619274.84         786.94         
+total-mem               123507       123803       123621.00       6874.40           82.91          
+real-insert-time        2236         2543         2351.90         9299.09           96.43          
+user-insert-time        0            4000         400.00          1440000.00        1200.00        
+sys-insert-time         0            4000         400.00          1440000.00        1200.00        
+
+real	0m1.505s
+user	0m0.916s
+sys	0m0.252s
+$
+
+$ time path-set-test -t 10000
+param                   min          max          avg             var               dev            
+dups-line               0            0            0.00            0.00              0.00           
+uniq-line               10000        10000        10000.00        0.00              0.00           
+line-mem                576013       581638       579187.80       4276284.96        2067.92        
+dups-node               0            0            0.00            0.00              0.00           
+uniq-node               10000        10000        10000.00        0.00              0.00           
+dups-elem               68779        69340        69084.80        40508.36          201.27         
+uniq-elem               13222        13388        13311.40        2260.24           47.54          
+node-insert-eq          62640        63153        62893.90        31611.29          177.80         
+node-insert-lt          41579        58530        48878.80        29876421.36       5465.93        
+node-insert-gt          40551        60795        47203.50        52765010.25       7263.95        
+node-realloc-op         6            6            6.00            0.00              0.00           
+real-node-realloc-time  115          183          135.00          403.40            20.08          
+user-node-realloc-time  0            0            0.00            0.00              0.00           
+sys-node-realloc-time   0            0            0.00            0.00              0.00           
+elem-insert-eq          68779        69340        69084.80        40508.36          201.27         
+elem-insert-ne          47695        63928        52538.70        21980533.21       4688.34        
+elem-insert-hit         1            13           5.40            11.24             3.35           
+elem-realloc-op         9            9            9.00            0.00              0.00           
+real-elem-realloc-time  92           117          100.80          48.36             6.95           
+user-elem-realloc-time  0            0            0.00            0.00              0.00           
+sys-elem-realloc-time   0            4000         400.00          1440000.00        1200.00        
+rehash-op               5            5            5.00            0.00              0.00           
+rehash-hit              6842         7314         7100.80         15239.56          123.45         
+real-rehash-time        1138         1634         1323.10         14632.89          120.97         
+user-rehash-time        0            4001         800.20          2561280.16        1600.40        
+sys-rehash-time         0            4000         400.00          1440000.00        1200.00        
+hash-size               33071        33071        33071.00        0.00              0.00           
+hash-used               13222        13388        13311.40        2260.24           47.54          
+hash-load               0.40         0.40         0.40            0.00              0.00           
+node-struct-size        20           20           20.00           0.00              0.00           
+elem-struct-size        1            1            1.00            0.00              0.00           
+node-struct             29339        29620        29502.30        7533.41           86.80          
+elem-struct             13222        13388        13311.40        2260.24           47.54          
+node-mem                586780       592400       590046.00       3013364.00        1735.90        
+elem-mem                202435       205640       203942.30       844162.21         918.78         
+total-node-mem          790871       796488       793988.30       3396354.61        1842.92        
+total-mem               998883       999547       999189.40       36163.84          190.17         
+real-insert-time        15691        18398        16970.00        929471.20         964.09         
+user-insert-time        4000         20001        10400.60        19842720.24       4454.52        
+sys-insert-time         0            20001        5600.10         29442880.09       5426.13        
+
+real	0m1.636s
+user	0m1.012s
+sys	0m0.308s
+$
+
+$ time path-set-test -t 100000
+param                   min          max          avg             var               dev            
+dups-line               0            0            0.00            0.00              0.00           
+uniq-line               100000       100000       100000.00       0.00              0.00           
+line-mem                5774908      5798395      5786685.20      41587247.96       6448.82        
+dups-node               0            0            0.00            0.00              0.00           
+uniq-node               100000       100000       100000.00       0.00              0.00           
+dups-elem               741098       743183       741982.20       442697.96         665.36         
+uniq-elem               81406        81920        81670.40        20537.44          143.31         
+node-insert-eq          691489       693516       692373.30       368610.81         607.13         
+node-insert-lt          556629       721506       629898.30       2276021300.01     47707.67       
+node-insert-gt          557991       737209       631839.60       2867284025.44     53547.03       
+node-realloc-op         9            9            9.00            0.00              0.00           
+real-node-realloc-time  119          189          161.10          389.89            19.75          
+user-node-realloc-time  0            0            0.00            0.00              0.00           
+sys-node-realloc-time   0            0            0.00            0.00              0.00           
+elem-insert-eq          741098       743183       741982.20       442697.96         665.36         
+elem-insert-ne          371937       446583       406072.80       557097893.56      23602.92       
+elem-insert-hit         1            12           4.40            11.04             3.32           
+elem-realloc-op         12           12           12.00           0.00              0.00           
+real-elem-realloc-time  114          144          129.10          87.09             9.33           
+user-elem-realloc-time  0            0            0.00            0.00              0.00           
+sys-elem-realloc-time   0            0            0.00            0.00              0.00           
+rehash-op               7            7            7.00            0.00              0.00           
+rehash-hit              29284        30196        29925.80        80052.36          282.94         
+real-rehash-time        5786         7451         6164.70         195369.81         442.01         
+user-rehash-time        0            12001        5200.20         9761120.16        3124.28        
+sys-rehash-time         0            8000         1200.00         6560000.00        2561.25        
+hash-size               132329       132329       132329.00       0.00              0.00           
+hash-used               81406        81920        81670.40        20537.44          143.31         
+hash-load               0.62         0.62         0.62            -0.00             0.00           
+node-struct-size        20           20           20.00           0.00              0.00           
+elem-struct-size        1            1            1.00            0.00              0.00           
+node-struct             231171       231422       231279.30       6232.61           78.95          
+elem-struct             81406        81920        81670.40        20537.44          143.31         
+node-mem                4623420      4628440      4625586.00      2493044.00        1578.94        
+elem-mem                1369885      1383093      1377343.80      15134098.56       3890.26        
+total-node-mem          5993645      6007640      6002929.80      17108480.96       4136.24        
+total-mem               7556859      7558915      7557857.40      328599.03         573.24         
+real-insert-time        156521       166400       160493.40       7324253.24        2706.34        
+user-insert-time        96005        144010       120406.80       222280162.16      14909.06       
+sys-insert-time         32002        68004        43202.40        92170240.64       9600.53        
+
+real	0m3.400s
+user	0m2.616s
+sys	0m0.776s
+$
+
+$ time path-set-test -t 1000000
+param                   min          max          avg             var               dev            
+dups-line               0            0            0.00            0.00              0.00           
+uniq-line               830206       830206       830206.00       0.00              0.00           
+line-mem                48049857     48049857     48049857.00     -0.50             0.71           
+dups-node               0            0            0.00            0.00              0.00           
+uniq-node               830206       830206       830206.00       0.00              0.00           
+dups-elem               6396539      6396539      6396539.00      0.00              0.00           
+uniq-elem               441310       441310       441310.00       0.00              0.00           
+node-insert-eq          5944051      5944051      5944051.00      0.00              0.00           
+node-insert-lt          6041706      7596498      6872477.50      308445757982.85   555378.93      
+node-insert-gt          6018482      7430082      6432624.50      206090390189.25   453971.79      
+node-realloc-op         12           12           12.00           0.00              0.00           
+real-node-realloc-time  695          881          783.10          3033.09           55.07          
+user-node-realloc-time  0            4000         400.00          1440000.00        1200.00        
+sys-node-realloc-time   0            0            0.00            0.00              0.00           
+elem-insert-eq          6396539      6396539      6396539.00      0.00              0.00           
+elem-insert-ne          2599504      3205532      2964361.10      34236335036.49    185030.63      
+elem-insert-hit         0            11           6.60            11.44             3.38           
+elem-realloc-op         14           14           14.00           0.00              0.00           
+real-elem-realloc-time  161          190          173.20          99.76             9.99           
+user-elem-realloc-time  0            0            0.00            0.00              0.00           
+sys-elem-realloc-time   0            0            0.00            0.00              0.00           
+rehash-op               10           10           10.00           0.00              0.00           
+rehash-hit              247673       248977       248049.30       157309.61         396.62         
+real-rehash-time        77783        81808        80284.90        1635125.49        1278.72        
+user-rehash-time        72003        80006        76404.60        7841920.64        2800.34        
+sys-rehash-time         0            8001         3600.20         4640960.16        2154.29        
+hash-size               1058657      1058657      1058657.00      0.00              0.00           
+hash-used               441310       441310       441310.00       0.00              0.00           
+hash-load               0.42         0.42         0.42            -0.00             0.00           
+node-struct-size        20           20           20.00           0.00              0.00           
+elem-struct-size        1            1            1.00            0.00              0.00           
+node-struct             1724004      1724004      1724004.00      0.00              0.00           
+elem-struct             441310       441310       441310.00       0.00              0.00           
+node-mem                34480080     34480080     34480080.00     0.00              0.00           
+elem-mem                7980947      7980947      7980947.00      0.00              0.00           
+total-node-mem          42461027     42461027     42461027.00     -0.50             0.71           
+total-mem               52859235     52859235     52859235.00     -0.50             0.71           
+real-insert-time        1631115      1683156      1649962.70      248464842.01      15762.77       
+user-insert-time        1276077      1404082      1359683.80      1217620656.56     34894.42       
+sys-insert-time         268017       372023       309219.60       1203519367.24     34691.78       
+
+real	0m21.058s
+user	0m18.693s
+sys	0m4.584s
+$
+
+$ path-set-test -p dups-line -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            0            0.00            0.00              0.00
+10000       0            0            0.00            0.00              0.00
+100000      0            0            0.00            0.00              0.00
+1000000     0            0            0.00            0.00              0.00
+$
+
+$ path-set-test -p uniq-line -R ...
+files       min          max          avg             var               dev
+10          10           10           10.00           0.00              0.00
+100         100          100          100.00          0.00              0.00
+1000        1000         1000         1000.00         0.00              0.00
+10000       10000        10000        10000.00        0.00              0.00
+100000      100000       100000       100000.00       0.00              0.00
+1000000     830206       830206       830206.00       0.00              0.00
+$
+
+$ path-set-test -p line-mem -R ...
+files       min          max          avg             var               dev
+10          433          631          556.70          3852.61           62.07
+100         5542         6086         5767.60         32995.04          181.65
+1000        56444        59175        57912.90        599073.69         774.00
+10000       576013       581638       579187.80       4276284.96        2067.92
+100000      5774908      5798395      5786685.20      41587247.96       6448.82
+1000000     48049857     48049857     48049857.00     -0.50             0.71
+$
+
+$ path-set-test -p dups-node -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            0            0.00            0.00              0.00
+10000       0            0            0.00            0.00              0.00
+100000      0            0            0.00            0.00              0.00
+1000000     0            0            0.00            0.00              0.00
+$
+
+$ path-set-test -p uniq-node -R ...
+files       min          max          avg             var               dev
+10          10           10           10.00           0.00              0.00
+100         100          100          100.00          0.00              0.00
+1000        1000         1000         1000.00         0.00              0.00
+10000       10000        10000        10000.00        0.00              0.00
+100000      100000       100000       100000.00       0.00              0.00
+1000000     830206       830206       830206.00       0.00              0.00
+$
+
+$ path-set-test -p dups-elem -R ...
+files       min          max          avg             var               dev
+10          24           32           28.50           7.85              2.80
+100         456          504          479.40          169.44            13.02
+1000        5939         6143         6057.10         4904.09           70.03
+10000       68779        69340        69084.80        40508.36          201.27
+100000      741098       743183       741982.20       442697.96         665.36
+1000000     6396539      6396539      6396539.00      0.00              0.00
+$
+
+$ path-set-test -p uniq-elem -R ...
+files       min          max          avg             var               dev
+10          42           61           51.80           54.16             7.36
+100         322          374          347.50          180.25            13.43
+1000        2118         2192         2163.50         429.65            20.73
+10000       13222        13388        13311.40        2260.24           47.54
+100000      81406        81920        81670.40        20537.44          143.31
+1000000     441310       441310       441310.00       0.00              0.00
+$
+
+$ path-set-test -p node-insert-eq -R ...
+files       min          max          avg             var               dev
+10          21           30           25.00           7.40              2.72
+100         389          429          411.30          176.61            13.29
+1000        5165         5320         5263.20         3102.56           55.70
+10000       62640        63153        62893.90        31611.29          177.80
+100000      691489       693516       692373.30       368610.81         607.13
+1000000     5944051      5944051      5944051.00      0.00              0.00
+$
+
+$ path-set-test -p node-insert-lt -R ...
+files       min          max          avg             var               dev
+10          4            19           12.30           17.01             4.12
+100         145          235          199.70          798.81            28.26
+1000        2858         3700         3308.70         64315.81          253.61
+10000       41579        58530        48878.80        29876421.36       5465.93
+100000      556629       721506       629898.30       2276021300.01     47707.67
+1000000     6041706      7596498      6872477.50      308445757982.85   555378.93
+$
+
+$ path-set-test -p node-insert-gt -R ...
+files       min          max          avg             var               dev
+10          2            15           6.10            13.49             3.67
+100         113          206          171.00          584.60            24.18
+1000        2737         4141         3228.30         150556.41         388.02
+10000       40551        60795        47203.50        52765010.25       7263.95
+100000      557991       737209       631839.60       2867284025.44     53547.03
+1000000     6018482      7430082      6432624.50      206090390189.25   453971.79
+$
+
+$ path-set-test -p node-realloc-op -R ...
+files       min          max          avg             var               dev
+10          1            1            1.00            0.00              0.00
+100         1            1            1.00            0.00              0.00
+1000        3            3            3.00            0.00              0.00
+10000       6            6            6.00            0.00              0.00
+100000      9            9            9.00            0.00              0.00
+1000000     12           12           12.00           0.00              0.00
+$
+
+$ path-set-test -p real-node-realloc-time -R ...
+files       min          max          avg             var               dev
+10          2            3            2.60            0.24              0.49
+100         2            4            3.00            0.20              0.45
+1000        16           66           28.40           308.84            17.57
+10000       115          183          135.00          403.40            20.08
+100000      119          189          161.10          389.89            19.75
+1000000     695          881          783.10          3033.09           55.07
+$
+
+$ path-set-test -p user-node-realloc-time -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            0            0.00            0.00              0.00
+10000       0            0            0.00            0.00              0.00
+100000      0            0            0.00            0.00              0.00
+1000000     0            4000         400.00          1440000.00        1200.00
+$
+
+$ path-set-test -p sys-node-realloc-time -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            0            0.00            0.00              0.00
+10000       0            0            0.00            0.00              0.00
+100000      0            0            0.00            0.00              0.00
+1000000     0            0            0.00            0.00              0.00
+$
+
+$ path-set-test -p elem-insert-eq -R ...
+files       min          max          avg             var               dev
+10          24           32           28.50           7.85              2.80
+100         456          504          479.40          169.44            13.02
+1000        5939         6143         6057.10         4904.09           70.03
+10000       68779        69340        69084.80        40508.36          201.27
+100000      741098       743183       741982.20       442697.96         665.36
+1000000     6396539      6396539      6396539.00      0.00              0.00
+$
+
+$ path-set-test -p elem-insert-ne -R ...
+files       min          max          avg             var               dev
+10          0            3            1.30            1.21              1.10
+100         72           117          92.50           207.65            14.41
+1000        4678         5771         5304.00         183764.20         428.68
+10000       47695        63928        52538.70        21980533.21       4688.34
+100000      371937       446583       406072.80       557097893.56      23602.92
+1000000     2599504      3205532      2964361.10      34236335036.49    185030.63
+$
+
+$ path-set-test -p elem-insert-hit -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            2            0.50            0.45              0.67
+10000       1            13           5.40            11.24             3.35
+100000      1            12           4.40            11.04             3.32
+1000000     0            11           6.60            11.44             3.38
+$
+
+$ path-set-test -p elem-realloc-op -R ...
+files       min          max          avg             var               dev
+10          1            1            1.00            0.00              0.00
+100         3            4            3.60            0.24              0.49
+1000        6            6            6.00            0.00              0.00
+10000       9            9            9.00            0.00              0.00
+100000      12           12           12.00           0.00              0.00
+1000000     14           14           14.00           0.00              0.00
+$
+
+$ path-set-test -p real-elem-realloc-time -R ...
+files       min          max          avg             var               dev
+10          3            4            3.90            0.09              0.30
+100         7            12           9.10            1.89              1.37
+1000        14           53           31.70           106.01            10.30
+10000       92           117          100.80          48.36             6.95
+100000      114          144          129.10          87.09             9.33
+1000000     161          190          173.20          99.76             9.99
+$
+
+$ path-set-test -p user-elem-realloc-time -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            0            0.00            0.00              0.00
+10000       0            0            0.00            0.00              0.00
+100000      0            0            0.00            0.00              0.00
+1000000     0            0            0.00            0.00              0.00
+$
+
+$ path-set-test -p sys-elem-realloc-time -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            0            0.00            0.00              0.00
+10000       0            4000         400.00          1440000.00        1200.00
+100000      0            0            0.00            0.00              0.00
+1000000     0            0            0.00            0.00              0.00
+$
+
+$ path-set-test -p rehash-op -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        2            2            2.00            0.00              0.00
+10000       5            5            5.00            0.00              0.00
+100000      7            7            7.00            0.00              0.00
+1000000     10           10           10.00           0.00              0.00
+$
+
+$ path-set-test -p rehash-hit -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        642          809          709.70          2794.81           52.87
+10000       6842         7314         7100.80         15239.56          123.45
+100000      29284        30196        29925.80        80052.36          282.94
+1000000     247673       248977       248049.30       157309.61         396.62
+$
+
+$ path-set-test -p real-rehash-time -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        94           185          167.10          614.89            24.80
+10000       1138         1634         1323.10         14632.89          120.97
+100000      5786         7451         6164.70         195369.81         442.01
+1000000     77783        81808        80284.90        1635125.49        1278.72
+$
+
+$ path-set-test -p user-rehash-time -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            0            0.00            0.00              0.00
+10000       0            4001         800.20          2561280.16        1600.40
+100000      0            12001        5200.20         9761120.16        3124.28
+1000000     72003        80006        76404.60        7841920.64        2800.34
+$
+
+$ path-set-test -p sys-rehash-time -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            0            0.00            0.00              0.00
+10000       0            4000         400.00          1440000.00        1200.00
+100000      0            8000         1200.00         6560000.00        2561.25
+1000000     0            8001         3600.20         4640960.16        2154.29
+$
+
+$ path-set-test -p hash-size -R ...
+files       min          max          avg             var               dev
+10          1031         1031         1031.00         0.00              0.00
+100         1031         1031         1031.00         0.00              0.00
+1000        4127         4127         4127.00         0.00              0.00
+10000       33071        33071        33071.00        0.00              0.00
+100000      132329       132329       132329.00       0.00              0.00
+1000000     1058657      1058657      1058657.00      0.00              0.00
+$
+
+$ path-set-test -p hash-used -R ...
+files       min          max          avg             var               dev
+10          42           61           51.80           54.16             7.36
+100         322          374          347.50          180.25            13.43
+1000        2118         2192         2163.50         429.65            20.73
+10000       13222        13388        13311.40        2260.24           47.54
+100000      81406        81920        81670.40        20537.44          143.31
+1000000     441310       441310       441310.00       0.00              0.00
+$
+
+$ path-set-test -p hash-load -R ...
+files       min          max          avg             var               dev
+10          0.04         0.06         0.05            0.00              0.01
+100         0.31         0.36         0.34            0.00              0.01
+1000        0.51         0.53         0.52            0.00              0.01
+10000       0.40         0.40         0.40            0.00              0.00
+100000      0.62         0.62         0.62            -0.00             0.00
+1000000     0.42         0.42         0.42            -0.00             0.00
+$
+
+$ path-set-test -p node-struct-size -R ...
+files       min          max          avg             var               dev
+10          20           20           20.00           0.00              0.00
+100         20           20           20.00           0.00              0.00
+1000        20           20           20.00           0.00              0.00
+10000       20           20           20.00           0.00              0.00
+100000      20           20           20.00           0.00              0.00
+1000000     20           20           20.00           0.00              0.00
+$
+
+$ path-set-test -p elem-struct-size -R ...
+files       min          max          avg             var               dev
+10          1            1            1.00            0.00              0.00
+100         1            1            1.00            0.00              0.00
+1000        1            1            1.00            0.00              0.00
+10000       1            1            1.00            0.00              0.00
+100000      1            1            1.00            0.00              0.00
+1000000     1            1            1.00            0.00              0.00
+$
+
+$ path-set-test -p node-struct -R ...
+files       min          max          avg             var               dev
+10          52           75           65.30           70.41             8.39
+100         486          539          515.60          213.04            14.60
+1000        3885         4008         3957.40         1198.64           34.62
+10000       29339        29620        29502.30        7533.41           86.80
+100000      231171       231422       231279.30       6232.61           78.95
+1000000     1724004      1724004      1724004.00      0.00              0.00
+$
+
+$ path-set-test -p elem-struct -R ...
+files       min          max          avg             var               dev
+10          42           61           51.80           54.16             7.36
+100         322          374          347.50          180.25            13.43
+1000        2118         2192         2163.50         429.65            20.73
+10000       13222        13388        13311.40        2260.24           47.54
+100000      81406        81920        81670.40        20537.44          143.31
+1000000     441310       441310       441310.00       0.00              0.00
+$
+
+$ path-set-test -p node-mem -R ...
+files       min          max          avg             var               dev
+10          1040         1500         1306.00         28164.00          167.82
+100         9720         10780        10312.00        85216.00          291.92
+1000        77700        80160        79148.00        479456.00         692.43
+10000       586780       592400       590046.00       3013364.00        1735.90
+100000      4623420      4628440      4625586.00      2493044.00        1578.94
+1000000     34480080     34480080     34480080.00     0.00              0.00
+$
+
+$ path-set-test -p elem-mem -R ...
+files       min          max          avg             var               dev
+10          404          641          542.90          6301.69           79.38
+100         3914         4392         4143.60         16896.64          129.99
+1000        28819        30218        29526.60        154112.44         392.57
+10000       202435       205640       203942.30       844162.21         918.78
+100000      1369885      1383093      1377343.80      15134098.56       3890.26
+1000000     7980947      7980947      7980947.00      0.00              0.00
+$
+
+$ path-set-test -p total-node-mem -R ...
+files       min          max          avg             var               dev
+10          1484         2125         1848.90         59850.89          244.64
+100         13760        15172        14455.60        148902.24         385.88
+1000        106519       109278       108674.60       619274.84         786.94
+10000       790871       796488       793988.30       3396354.61        1842.92
+100000      5993645      6007640      6002929.80      17108480.96       4136.24
+1000000     42461027     42461027     42461027.00     -0.50             0.71
+$
+
+$ path-set-test -p total-mem -R ...
+files       min          max          avg             var               dev
+10          26246        26322        26282.80        866.56            29.44
+100         28155        32343        30667.40        3982379.04        1995.59
+1000        123507       123803       123621.00       6874.40           82.91
+10000       998883       999547       999189.40       36163.84          190.17
+100000      7556859      7558915      7557857.40      328599.03         573.24
+1000000     52859235     52859235     52859235.00     -0.50             0.71
+$
+
+$ path-set-test -p real-insert-time -R ...
+files       min          max          avg             var               dev
+10          25           33           29.90           7.29              2.70
+100         137          183          153.50          284.05            16.85
+1000        2236         2543         2351.90         9299.09           96.43
+10000       15691        18398        16970.00        929471.20         964.09
+100000      156521       166400       160493.40       7324253.24        2706.34
+1000000     1631115      1683156      1649962.70      248464842.01      15762.77
+$
+
+$ path-set-test -p user-insert-time -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            4000         400.00          1440000.00        1200.00
+10000       4000         20001        10400.60        19842720.24       4454.52
+100000      96005        144010       120406.80       222280162.16      14909.06
+1000000     1276077      1404082      1359683.80      1217620656.56     34894.42
+$
+
+$ path-set-test -p sys-insert-time -R ...
+files       min          max          avg             var               dev
+10          0            0            0.00            0.00              0.00
+100         0            0            0.00            0.00              0.00
+1000        0            4000         400.00          1440000.00        1200.00
+10000       0            20001        5600.10         29442880.09       5426.13
+100000      32002        68004        43202.40        92170240.64       9600.53
+1000000     268017       372023       309219.60       1203519367.24     34691.78
+$
+
+$ path-set-test -p dups-line -A ...
+min: 0
+max: 0
+avg: 0.00
+var: 0.00
+dev: 0.00
+$
+
+$ path-set-test -p uniq-line -A ...
+min: 10
+max: 830206
+avg: 156886.00
+var: 91943951760.00
+dev: 303222.61
+$
+
+$ path-set-test -p line-mem -A ...
+min: 556
+max: 48049857
+avg: 9079994.00
+var: 307989263286266.00
+dev: 17549622.88
+$
+
+$ path-set-test -p dups-node -A ...
+min: 0
+max: 0
+avg: 0.00
+var: 0.00
+dev: 0.00
+$
+
+$ path-set-test -p uniq-node -A ...
+min: 10
+max: 830206
+avg: 156886.00
+var: 91943951760.00
+dev: 303222.61
+$
+
+$ path-set-test -p dups-elem -A ...
+min: 28
+max: 6396539
+avg: 1202361.50
+var: 5466169820546.92
+dev: 2337984.14
+$
+
+$ path-set-test -p uniq-elem -A ...
+min: 51
+max: 441310
+avg: 89808.67
+var: 25535484941.56
+dev: 159798.26
+$
+
+$ path-set-test -p node-insert-eq -A ...
+min: 25
+max: 5944051
+avg: 1117502.67
+var: 4720372133308.56
+dev: 2172641.74
+$
+
+$ path-set-test -p node-insert-lt -A ...
+min: 12
+max: 6872477
+avg: 1259128.67
+var: 6352946942015.89
+dev: 2520505.29
+$
+
+$ path-set-test -p node-insert-gt -A ...
+min: 6
+max: 6432624
+avg: 1185845.17
+var: 5557123010654.47
+dev: 2357355.09
+$
+
+$ path-set-test -p node-realloc-op -A ...
+min: 1
+max: 12
+avg: 5.33
+var: 16.89
+dev: 4.11
+$
+
+$ path-set-test -p real-node-realloc-time -A ...
+min: 2
+max: 783
+avg: 185.33
+var: 75323.56
+dev: 274.45
+$
+
+$ path-set-test -p user-node-realloc-time -A ...
+min: 0
+max: 400
+avg: 66.67
+var: 22222.22
+dev: 149.07
+$
+
+$ path-set-test -p sys-node-realloc-time -A ...
+min: 0
+max: 0
+avg: 0.00
+var: 0.00
+dev: 0.00
+$
+
+$ path-set-test -p elem-insert-eq -A ...
+min: 28
+max: 6396539
+avg: 1202361.50
+var: 5466169820546.92
+dev: 2337984.14
+$
+
+$ path-set-test -p elem-insert-ne -A ...
+min: 1
+max: 2964361
+avg: 571394.67
+var: 1166027966543.22
+dev: 1079827.75
+$
+
+$ path-set-test -p elem-insert-hit -A ...
+min: 0
+max: 6
+avg: 2.50
+var: 6.58
+dev: 2.57
+$
+
+$ path-set-test -p elem-realloc-op -A ...
+min: 1
+max: 14
+avg: 7.50
+var: 21.58
+dev: 4.65
+$
+
+$ path-set-test -p real-elem-realloc-time -A ...
+min: 3
+max: 173
+avg: 74.17
+var: 4102.81
+dev: 64.05
+$
+
+$ path-set-test -p user-elem-realloc-time -A ...
+min: 0
+max: 0
+avg: 0.00
+var: 0.00
+dev: 0.00
+$
+
+$ path-set-test -p sys-elem-realloc-time -A ...
+min: 0
+max: 400
+avg: 66.67
+var: 22222.22
+dev: 149.07
+$
+
+$ path-set-test -p rehash-op -A ...
+min: 0
+max: 10
+avg: 4.00
+var: 13.67
+dev: 3.70
+$
+
+$ path-set-test -p rehash-hit -A ...
+min: 0
+max: 248049
+avg: 47630.50
+var: 8143789587.58
+dev: 90242.95
+$
+
+$ path-set-test -p real-rehash-time -A ...
+min: 0
+max: 80284
+avg: 14656.33
+var: 866074188.22
+dev: 29429.14
+$
+
+$ path-set-test -p user-rehash-time -A ...
+min: 0
+max: 76404
+avg: 13734.00
+var: 788919113.33
+dev: 28087.70
+$
+
+$ path-set-test -p sys-rehash-time -A ...
+min: 0
+max: 3600
+avg: 866.67
+var: 1675555.56
+dev: 1294.43
+$
+
+$ path-set-test -p hash-size -A ...
+min: 1031
+max: 1058657
+avg: 205041.00
+var: 147854597816.00
+dev: 384518.66
+$
+
+$ path-set-test -p hash-used -A ...
+min: 51
+max: 441310
+avg: 89808.67
+var: 25535484941.56
+dev: 159798.26
+$
+
+$ path-set-test -p hash-load -A ...
+min: 0
+max: 0
+avg: 0.00
+var: 0.00
+dev: 0.00
+$
+
+$ path-set-test -p node-struct-size -A ...
+min: 20
+max: 20
+avg: 20.00
+var: 0.00
+dev: 0.00
+$
+
+$ path-set-test -p elem-struct-size -A ...
+min: 1
+max: 1
+avg: 1.00
+var: 0.00
+dev: 0.00
+$
+
+$ path-set-test -p node-struct -A ...
+min: 65
+max: 1724004
+avg: 331553.67
+var: 394499843313.22
+dev: 628092.23
+$
+
+$ path-set-test -p elem-struct -A ...
+min: 51
+max: 441310
+avg: 89808.67
+var: 25535484941.56
+dev: 159798.26
+$
+
+$ path-set-test -p node-mem -A ...
+min: 1306
+max: 34480080
+avg: 6631079.67
+var: 157799864017785.88
+dev: 12561841.59
+$
+
+$ path-set-test -p elem-mem -A ...
+min: 542
+max: 7980947
+avg: 1599407.17
+var: 8381075105000.47
+dev: 2895008.65
+$
+
+$ path-set-test -p total-node-mem -A ...
+min: 1848
+max: 42461027
+avg: 8230486.83
+var: 238861821456046.44
+dev: 15455155.17
+$
+
+$ path-set-test -p total-mem -A ...
+min: 26282
+max: 52859235
+avg: 10266141.83
+var: 369978868397124.81
+dev: 19234834.76
+$
+
+$ path-set-test -p real-insert-time -A ...
+min: 29
+max: 1649962
+avg: 304993.00
+var: 365050292758.33
+dev: 604193.92
+$
+
+$ path-set-test -p user-insert-time -A ...
+min: 0
+max: 1359683
+avg: 248481.50
+var: 248814241711.92
+dev: 498812.83
+$
+
+$ path-set-test -p sys-insert-time -A ...
+min: 0
+max: 309219
+avg: 59736.83
+var: 12683897870.81
+dev: 112622.81
+$
+

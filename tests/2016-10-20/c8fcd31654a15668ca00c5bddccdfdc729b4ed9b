@@ -1,0 +1,80 @@
+#
+# # meta command:
+# $ path-set-test \
+# --config-optimize \
+# --input=tests/files.txt \
+# --expr='10 ** x' \
+# --limits=1-6 \
+# --pool-size=1K \
+# --hash-size=1K \
+# --node-size=1K \
+# --rehash-size=1.4142 \
+# --rehash-load=NAN \
+# --separators='/' \
+# --repeat=10 \
+# --sleep=100 \
+# --run-series
+#
+
+$ date
+Thu Oct 20 16:44:27 EEST 2016
+$
+
+$ make -B 32BIT=no DEBUG=no OPT=4
+gcc -Wall -Wextra -std=gnu99 -I. -Ijson-type -Ignulib -DPROGRAM=path-set -DOPT=4 -O4 main.c common.c clocks.c set-intf.c pool-alloc.c trie-path-set.c lhash-path-set.c ghash-path-set.c trie-plain-set.c lhash-plain-set.c ghash-plain-set.c gnulib/hash.c -o path-set -lm
+$
+
+$ ./path-set -C
+CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS: no
+CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS: no
+CONFIG_PATH_TRIE_UINT_HASH_IDENTOP:  no
+CONFIG_TRIE_PATH_SET_PRINT_SET:      no
+CONFIG_VALUE_TYPE_SIZE:              64
+32BIT:                               no
+DEBUG:                               no
+OPT:                                 4
+$
+
+$ PATH_SET_TEST_INPUT=tests/files.txt
+$ PATH_SET_TEST_EXPR='10 ** x'
+$ PATH_SET_TEST_LIMITS=1-6
+$ PATH_SET_TEST_POOL_SIZE=1K
+$ PATH_SET_TEST_HASH_SIZE=1K
+$ PATH_SET_TEST_NODE_SIZE=1K
+$ PATH_SET_TEST_REHASH_SIZE=1.4142
+$ PATH_SET_TEST_REHASH_LOAD=NAN
+$ PATH_SET_TEST_SEPARATORS='/'
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --linear-hash
+215266d6d366aa6991760f06bc7c62973161e51b
+
+real	0m15.297s
+user	0m10.561s
+sys	0m3.932s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --gnulib-hash
+6076bb6e26b02778538ad184fae3806aeb1966b2
+
+real	0m17.120s
+user	0m12.269s
+sys	0m4.104s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --linear-hash
+b3aae4cee9c6b89ac0384ef529812027d5c0c108
+
+real	0m20.257s
+user	0m15.697s
+sys	0m4.024s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --gnulib-hash
+111b85c6a00d0537257715e6de4538d5d5ca2a01
+
+real	0m21.919s
+user	0m17.253s
+sys	0m4.168s
+$
+

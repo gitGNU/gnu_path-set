@@ -1,0 +1,81 @@
+#
+# # meta command:
+# $ path-set-test \
+# --config-32bit \
+# --config-optimize \
+# --input=tests/files2.txt \
+# --expr='10 ** x' \
+# --limits=1-6 \
+# --pool-size=1K \
+# --hash-size=1K \
+# --node-size=1K \
+# --rehash-size=2 \
+# --rehash-load=NAN \
+# --separators='/' \
+# --repeat=10 \
+# --sleep=100 \
+# --run-series
+#
+
+$ date
+Thu Oct 20 17:02:01 EEST 2016
+$
+
+$ make -B 32BIT=yes DEBUG=no OPT=4
+gcc -Wall -Wextra -std=gnu99 -I. -Ijson-type -Ignulib -DPROGRAM=path-set -DOPT=4 -O4 -DBIT32 -m32 main.c common.c clocks.c set-intf.c pool-alloc.c trie-path-set.c lhash-path-set.c ghash-path-set.c trie-plain-set.c lhash-plain-set.c ghash-plain-set.c gnulib/hash.c -o path-set -lm
+$
+
+$ ./path-set -C
+CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS: no
+CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS: no
+CONFIG_PATH_TRIE_UINT_HASH_IDENTOP:  no
+CONFIG_TRIE_PATH_SET_PRINT_SET:      no
+CONFIG_VALUE_TYPE_SIZE:              32
+32BIT:                               yes
+DEBUG:                               no
+OPT:                                 4
+$
+
+$ PATH_SET_TEST_INPUT=tests/files2.txt
+$ PATH_SET_TEST_EXPR='10 ** x'
+$ PATH_SET_TEST_LIMITS=1-6
+$ PATH_SET_TEST_POOL_SIZE=1K
+$ PATH_SET_TEST_HASH_SIZE=1K
+$ PATH_SET_TEST_NODE_SIZE=1K
+$ PATH_SET_TEST_REHASH_SIZE=2
+$ PATH_SET_TEST_REHASH_LOAD=NAN
+$ PATH_SET_TEST_SEPARATORS='/'
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --linear-hash
+ed7db3b8686d97049c2ee6d7e7197dcedde6b20e
+
+real	0m23.936s
+user	0m16.585s
+sys	0m7.556s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --plain-set --gnulib-hash
+663e061fe3e3ddaa82d2390f7ee3229109e98a24
+
+real	0m24.338s
+user	0m16.961s
+sys	0m7.452s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --linear-hash
+1ec078e179bbc93d4f93a63d683cb538188a948b
+
+real	0m34.410s
+user	0m26.938s
+sys	0m8.013s
+$
+
+$ time path-set-test --quiet --output=+ --run-tests --path-trie --gnulib-hash
+bae5ba18e98d1bf96bb7cf990891be8c3d15b76c
+
+real	0m36.591s
+user	0m29.350s
+sys	0m8.041s
+$
+
