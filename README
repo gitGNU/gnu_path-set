@@ -130,8 +130,8 @@ of the 'insert' and 'lookup' operations of TSTs on his own site (see the links
 attached to reference entry [3], specifically the two C source files, 'tstdemo.c'
 and 'demo.c'). I used his C code as spring of inspiration for my implementation.
 
-The 'linear-hash' data structure is a simplistic implementation of the linear
-probing hash table of Knuth [4, pp. 526-528].
+The 'linear-hash' data structure is an implementation of the linear probing hash
+table of Knuth [4, pp. 526-528].
 
 The 'gnulib-hash' data structure is a modified version of Gnulib's [2] generic
 chained hash table implementation. The Gnulib's implementation was adapted to
