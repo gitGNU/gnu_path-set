@@ -1,0 +1,761 @@
+Copyright (C) 2016  Stefan Vargyas
+
+This file is part of Path-Set.
+
+Path-Set is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Path-Set is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Path-Set.  If not, see <http://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------------
+
+
+                            Path-Set with Rehashing
+                            =======================
+                        Ştefan Vargyas, stvar@yahoo.com
+
+                                  Oct 22, 2016
+
+
+Table of Contents
+-----------------
+
+1. Path-Set Without Fixed-Size Structures
+2. Result Data Testing 'path-set'
+3. The Complete Testing Scenario
+4. Comparing Rehash Size Factors
+5. Comparing Linear and Gnulib Hash Tables
+
+
+1. Path-Set Without Fixed-Size Structures
+=========================================
+
+This document presents a thoroughgoing testing scenario of a number of relevant
+'path-set' configurations upon the replacement of all Path-Set's fixed-size data
+structures with dynamically amortized-growing ones. This renewal resulted in the
+enhancement of linear hash table data structures with the much awaited 'rehash'
+operation. Note that before reading further, one should be acquainted with the
+content of the README file.
+
+First thing one must be aware of reading this document is that it is based on
+the source tree revision identified in Path-Set's git repository by commit hash
+2e72ebee6ac69bc04d30aea91bf48cef7175bd58.
+
+The series of tests of Path-Set documented in 'doc/path-set-total-mem.txt' have
+shown that 'path-set' consumed quite an amount of memory when it was compiled on
+a 64-bit platform with either one of the 'CONFIG_PATH_TRIE_NODE_32BIT_OFFSETS'
+or 'CONFIG_PATH_TRIE_ELEM_32BIT_OFFSETS' parameters defined. This was due to the
+fact that the respective implementation of Path-Set (identified by commit hash
+2411e8debaa6021d5c4f2110193cf203e53eb4d3) used only fixed-size preallocated data
+structures.
+
+There were two cases of fixed-size preallocated array structures that influenced
+heavily the total amount of memory claimed by 'path-set': one array was used by
+the path trie data structure and other -- by the linear hash table structure:
+
+  file in src/      data structure  array      array element type
+  ----------------  --------------  ---------  ---------------------------
+  path-trie-impl.h  PATH_TRIE_TYPE  table.ptr  struct PATH_TRIE_TABLE_TYPE
+  lhash-impl.h      LHASH_TYPE      table      struct LHASH_NODE_TYPE*
+
+The sizes of these two arrays -- 'table.ptr' and 'table' -- were determined by
+two command line options of 'path-set' binary: `--node-size' and `--hash-size',
+respectively.
+
+Currently Path-Set got rid of all its fixed-size preallocated data structures,
+including the two mentioned above. The struct member 'table' of 'PATH_TRIE_TYPE'
+containing the array 'table.ptr' was replaced with a new member 'node_alloc' of
+type struct 'PATH_TRIE_NODE_ALLOC_TYPE'. The new 'node_alloc' member carries out
+the same functionality as the former 'table' member, but allows for the table of
+'PATH_TRIE_NODE_TYPE' structs to grow dynamically through an amortized scheme.
+In the case of member 'table' of 'LHASH_TYPE' structure, the replacement was
+similar: a member 'node_alloc' of type struct 'LHASH_NODE_ALLOC_TYPE' having
+the same amortized growth property as member 'node_alloc' of 'PATH_TRIE_TYPE'.
+
+The next sections show measurement results regarding memory consumption and load
+up timings obtained running a couple of relevant series of tests employing these
+freshened up dictionary data structures.
+
+
+2. Result Data Testing 'path-set'
+=================================
+
+This section presents the aggregated results obtained from running the series of
+tests which are documented in the next section.
+
+The 'path-set' binaries were compiled with the stock GCC version 4.3.4. 
+
+The tests ran on a GNU/Linux 64-bit Intel x86 CPU machine, on two sets of file
+path names obtained from running 'find' on two private file systems. These sets
+of file path names will be referred to by the following names: 'tests/files.txt'
+and 'tests/files2.txt'. The number of path names contained in and, respectively,
+the size of these text files are as shown:
+
+  $ test-files-wc() { find tests -maxdepth 1 -name files\*.txt|xargs -n1 wc -cl|sed -r 's/^\s+//'; }
+
+  $ test-files-wc 
+  405909 27072347 tests/files.txt
+  830206 48880063 tests/files2.txt
+
+  $ numfmt() { env numfmt --to=iec --round=nearest --format=%1f "$@"; }
+
+  $ test-files-wc|numfmt --field=1|numfmt --field=2
+  396K 26M tests/files.txt
+  811K 47M tests/files2.txt
+
+The resulting data obtained from running several instances of 'path-set-test'
+command lines looks as exhibited by the tables below. Firstly, three tables
+obtained from file 'tests/files.txt':
+
+  -------------------------------------------------------------------------
+      32-bit pointers, plain pointers ('path-set-test-grep' command #1)
+  ---------------+---------+---------------+---------------+---------------
+    rehash size  |  input  |   plain-set   |   path-trie   |   (3) gains
+       factor    |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                 |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  ---------------+---------+---------------+---------------+-------+-------
+       1.4142    |         |     32.9M     |     17.2M     |  32%  |  48% 
+  ---------------+  25.4M  +---------------+---------------+-------+-------
+          2      |         |     32.7M     |     17.8M     |  30%  |  46%
+  ---------------+---------+---------------+---------------+-------+-------
+
+  -------------------------------------------------------------------------
+      64-bit pointers, plain pointers ('path-set-test-grep' command #2)
+  ---------------+---------+---------------+---------------+---------------
+    rehash size  |  input  |   plain-set   |   path-trie   |   (3) gains
+       factor    |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                 |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  ---------------+---------+---------------+---------------+-------+-------
+       1.4142    |         |     40.0M     |     30.4M     | -20%  |  24% 
+  ---------------+  25.4M  +---------------+---------------+-------+-------
+          2      |         |     39.7M     |     31.6M     | -24%  |  21%
+  ---------------+---------|---------------+---------------+-------+-------
+
+  -------------------------------------------------------------------------
+      64-bit pointers, 32-bit offsets ('path-set-test-grep' command #3)
+  ---------------+---------+---------------+---------------+---------------
+    rehash size  |  input  |   plain-set   |   path-trie   |   (3) gains
+       factor    |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                 |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  ---------------+---------+---------------+---------------+-------+-------
+       1.4142    |         |     40.0M     |     24.5M     |   4%  |  38%
+  ---------------+  25.4M  +---------------+---------------+-------+-------
+          2      |         |     39.7M     |     25.1M     |   1%  |  37%
+  ---------------+---------|---------------+---------------+-------+-------
+
+For file 'tests/files2.txt', the resulting test data looks as follows:
+
+  -------------------------------------------------------------------------
+      32-bit pointers, plain pointers ('path-set-test-grep' command #4)
+  ---------------+---------+---------------+---------------+---------------
+    rehash size  |  input  |   plain-set   |   path-trie   |   (3) gains
+       factor    |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                 |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  ---------------+---------+---------------+---------------+-------+-------
+       1.4142    |         |     60.9M     |     35.1M     |  23%  |  42%
+  ---------------+  45.8M  +---------------+---------------+-------+-------
+          2      |         |     60.7M     |     36.3M     |  21%  |  40%
+  ---------------+---------+---------------+---------------+-------+-------
+
+  -------------------------------------------------------------------------
+      64-bit pointers, plain pointers ('path-set-test-grep' command #5)
+  ---------------+---------+---------------+---------------+---------------
+    rehash size  |  input  |   plain-set   |   path-trie   |   (3) gains
+       factor    |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                 |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  ---------------+---------+---------------+---------------+-------+-------
+       1.4142    |         |     75.2M     |     62.6M     | -37%  |  17%
+  ---------------+  45.8M  +---------------+---------------+-------+-------
+          2      |         |     74.8M     |     64.9M     | -42%  |  13%
+  ---------------+---------+---------------+---------------+-------+-------
+
+  -------------------------------------------------------------------------
+      64-bit pointers, 32-bit offsets ('path-set-test-grep' command #6)
+  ---------------+---------+---------------+---------------+---------------
+    rehash size  |  input  |   plain-set   |   path-trie   |   (3) gains
+       factor    |  size   |  gnulib-hash  |  linear-hash  +-------+-------
+                 |   (1)   |      (2)      |      (3)      |  (1)  |  (2)
+  ---------------+---------+---------------+---------------+-------+-------
+       1.4142    |         |     75.2M     |     49.2M     |  -7%  |  34%
+  ---------------+  45.8M  +---------------+---------------+-------+-------
+          2      |         |     74.8M     |     50.4M     | -10%  |  33%
+  ---------------+---------+---------------+---------------+-------+-------
+
+The values displayed by the six tables above are mere projections of the data
+contained in the corresponding tables produced by the named 'path-set-test-grep'
+command instances to be seen in the next section.
+
+The fourth column of the tables above was invariably set to be the linear hash
+path trie dictionary data structure. Remark looking at the tables in section 2,
+that this data structure almost always wins against the other dictionary types
+Path-Set is currently implementing. The exceptions occur in the cases of test
+series using 64-bit plain pointers, for which the plain linear hash structure
+with a certain rehash size factor is better by a small margin than the linear
+hash path trie with a certain different rehash size factor.
+
+
+2. The Complete Testing Scenario
+================================
+
+The testing scenario applied to the input files 'tests/files{,2}.txt' is laid
+out to its entire extent by the sequence of command lines following below.
+
+First step: source in the 'bash' script 'src/commands.sh', enabling the 'bash'
+option 'extglob' in the current environment. (The shell functions defined by
+'src/commands.sh' need from 'bash' its extended pattern matching features.)
+
+  $ cd src
+
+  $ shopt -s extglob
+
+  $ . commands.sh
+
+Second step: ensure that the current directory does not contain SHA1-named files
+(the 'find' command below produces an empty output):
+
+  $ SHA1NAMES=$(printf '%40s\n'|sed 's/ /[0-9a-f]/g')
+
+  $ find -maxdepth 1 -name "$SHA1NAMES"
+
+Third step: proceed running several 'path-set-test' commands, each having an own
+set of `--config-*' command line options specified. Note that each such set of
+configuration parameters is applied to two 'path-set-test' instances: one for
+which `--rehash-size' is set to 1.4142 (that is an approximation of the square
+root of 2) and one for which `--rehash-size' is set to be '2'. The command line
+option `--exclude=ternary-tree' tells 'path-set-test' to exclude running tests
+on ternary tree dictionary types. Options `--{pool,hash,node}-size' were each
+receiving the argument '1K': the intent here is to start running each 'path-set'
+instance from a small initial amount of preallocated memory of its dynamically
+amortized-growing data structures.
+
+  $ path-set-test -E -i tests/files.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize \
+  --rehash-size=1.4142
+  c8fcd31654a15668ca00c5bddccdfdc729b4ed9b
+
+  $ path-set-test -E -i tests/files.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize \
+  --rehash-size=2
+  3b6f6fbaf60ea650f9edc77a58a0ae1f2d9220da
+
+  $ path-set-test -E -i tests/files.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize --config-path-trie-32bit-offsets \
+  --rehash-size=1.4142
+  62470d70534ce2db519a35993c304dff8d4f39b9
+
+  $ path-set-test -E -i tests/files.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize --config-path-trie-32bit-offsets \
+  --rehash-size=2
+  ec5b0519e5ffc8beae27866dda243011d95a3f39
+
+  $ path-set-test -E -i tests/files.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize --config-32bit \
+  --rehash-size=1.4142
+  bfcc79bb835b5d85f58c367748955940b05ef568
+
+  $ path-set-test -E -i tests/files.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize --config-32bit \
+  --rehash-size=2
+  a3faf02fa957b1e67fa29486bc4af6550c8526dd
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize \
+  --rehash-size=1.4142
+  bc2e82b2ed79e3c31bcb11e6ccc6176e6c7deea7
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize \
+  --rehash-size=2
+  a8d0dfedf9bdccd5dd15d656f70f9db16ad7a29c
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize --config-path-trie-32bit-offsets \
+  --rehash-size=1.4142
+  28f1ea82183cc30d630e47ec96f3dd03b2982065
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize --config-path-trie-32bit-offsets \
+  --rehash-size=2
+  adebf02b1f9f874463022dc20f9832e1562a9e77
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize --config-32bit \
+  --rehash-size=1.4142
+  da7e9b0ed24140d78dd392f2b6326f35ee166adf
+
+  $ path-set-test -E -i tests/files2.txt -o+ -q \
+  --exclude=ternary-tree --{pool,hash,node}-size=1K \
+  --config-optimize --config-32bit \
+  --rehash-size=2
+  ad61c9fb0811b15f1fe49891d4796107ee46d797
+
+Fourth step: move to a subdirectory of 'tests' directory all the 84 SHA1-named
+files produced by the 'path-set-test' commands issued above:
+
+  $ ls -1 $SHA1NAMES|wc -l
+  60
+
+  $ mkdir ../tests/2016-10-20
+
+  $ mv -t ../tests/2016-10-20 $SHA1NAMES
+
+Fifth step: arrange the statistics data obtained -- the SHA1-named files just
+moved to 'tests/2016-10-20' -- into human readable table formats:
+
+  $ cd ../tests/2016-10-20
+
+  # norm -b <num-list> [-c]
+  $ norm() {
+    local self='norm'
+    local b=''; local c=''
+    [ "${1:0:2}" == '-b' ] || {
+        [ "${1:0:1}" != '-' ] &&
+        { error "unexpected argument '$1'"; return 1; } ||
+        { error -u -P "${1:1:1}"; return 1; }
+    }
+    [ "$1" == '-b' ] && b="$2" || b="${1:2}"
+    [ "$1" == '-b' ] && shift; shift
+    [ "$1" == '-c' ] && c='c'
+    cut -b "$b" ${c:+--complement}; }
+
+  $ alias norm='norm -b 1-50,56-104,110-'
+
+  $ rehash-time-percents() { awk '
+  function print_line(s)
+  { printf("%s  %12s\n", $0, s) }
+  function percents(x, t)
+  { return sprintf("%.2f%%", x / t * 100) }
+  { print_line(FNR == 1 ? "rehash-time%" : percents($5, $10)) }'; }
+
+  # path-set-test-grep command #1:
+  $ path-set-test-grep -Fe \
+  --input=tests/files.txt --exclude=separators --include=rehash-size \
+  --stat-{rehash-op,real-{rehash,insert}-time,hash-load,total-mem=+} \
+  --config-32bit|norm|rehash-time-percents
+  struct-type  set-type     rehash-size  rehash-op  rehash-time  hash-load  total-mem  25.4M  32.8M  insert-time  rehash-time%
+  path-trie    linear-hash  1.4142           17.00     66207.20       0.68      17.2M    32%    48%    925187.50         7.16%
+  path-trie    linear-hash  2                 9.00     38285.70       0.48      17.8M    30%    46%    881051.90         4.35%
+  path-trie    gnulib-hash  2                 7.00     34289.30       0.79      20.7M    19%    37%    965057.70         3.55%
+  path-trie    gnulib-hash  1.4142           14.00     85034.60       0.78      20.7M    19%    37%   1031603.00         8.24%
+  plain-set    linear-hash  1.4142           19.00    233935.30       0.54      28.7M   -13%    13%    608999.20        38.41%
+  plain-set    linear-hash  2                10.00    134460.90       0.38      29.9M   -18%     9%    478267.50        28.11%
+  plain-set    gnulib-hash  2                 8.00    128607.90       0.71      32.7M   -29%     0%    428887.90        29.99%
+  plain-set    gnulib-hash  1.4142           16.00    312073.70       0.70      32.9M   -30%     0%    620571.40        50.29%
+
+  # path-set-test-grep command #2:
+  $ path-set-test-grep -Fe \
+  --input=tests/files.txt --exclude=separators --include=rehash-size \
+  --stat-{rehash-op,real-{rehash,insert}-time,hash-load,total-mem=+} \
+  --not --config-32bit --not --config-path-trie-32bit-offsets|norm|rehash-time-percents
+  struct-type  set-type     rehash-size  rehash-op  rehash-time  hash-load  total-mem  25.4M  39.8M  insert-time  rehash-time%
+  path-trie    linear-hash  1.4142           17.00     77754.70       0.68      30.4M   -20%    24%    890215.20         8.73%
+  plain-set    linear-hash  1.4142           19.00    252000.50       0.54      31.5M   -24%    21%    510217.10        49.39%
+  path-trie    linear-hash  2                 9.00     45124.80       0.48      31.6M   -24%    21%    828663.50         5.45%
+  plain-set    linear-hash  2                10.00    144812.60       0.38      33.9M   -33%    15%    393161.80        36.83%
+  path-trie    gnulib-hash  2                 7.00     44029.80       0.79      37.6M   -48%     6%    917527.80         4.80%
+  path-trie    gnulib-hash  1.4142           14.00    108792.10       0.79      37.6M   -48%     6%   1012131.70        10.75%
+  plain-set    gnulib-hash  2                 8.00    149710.40       0.71      39.7M   -56%     0%    422588.70        35.43%
+  plain-set    gnulib-hash  1.4142           16.00    368846.20       0.70      40.0M   -57%     0%    649100.10        56.82%
+
+  # path-set-test-grep command #3:
+  $ path-set-test-grep -Fe \
+  --input=tests/files.txt --exclude=separators --include=rehash-size \
+  --stat-{rehash-op,real-{rehash,insert}-time,hash-load,total-mem=+} \
+  --not --config-32bit --config-path-trie-32bit-offsets|norm|rehash-time-percents
+  struct-type  set-type     rehash-size  rehash-op  rehash-time  hash-load  total-mem  25.4M  39.8M  insert-time  rehash-time%
+  path-trie    linear-hash  1.4142           17.00     54897.40       0.68      24.5M     4%    38%    858454.60         6.39%
+  path-trie    linear-hash  2                 9.00     34147.40       0.48      25.1M     1%    37%    809102.20         4.22%
+  plain-set    linear-hash  1.4142           19.00    252700.80       0.54      31.5M   -24%    21%    511666.80        49.39%
+  plain-set    linear-hash  2                10.00    145262.70       0.38      33.9M   -33%    15%    391578.70        37.10%
+  path-trie    gnulib-hash  2                 7.00     38817.10       0.79      36.1M   -42%     9%    947596.20         4.10%
+  path-trie    gnulib-hash  1.4142           14.00     98269.60       0.79      36.1M   -42%     9%   1021091.50         9.62%
+  plain-set    gnulib-hash  2                 8.00    148190.30       0.71      39.7M   -56%     0%    413610.50        35.83%
+  plain-set    gnulib-hash  1.4142           16.00    361861.30       0.70      40.0M   -57%     0%    633901.50        57.08%
+
+  # path-set-test-grep command #4:
+  $ path-set-test-grep -Fe \
+  --input=tests/files2.txt --exclude=separators --include=rehash-size \
+  --stat-{rehash-op,real-{rehash,insert}-time,hash-load,total-mem=+} \
+  --config-32bit|norm|rehash-time-percents
+  struct-type  set-type     rehash-size  rehash-op  rehash-time  hash-load  total-mem  45.8M  60.8M  insert-time  rehash-time%
+  path-trie    linear-hash  1.4142           19.00    145798.80       0.59      35.1M    23%    42%   1862457.00         7.83%
+  path-trie    linear-hash  2                10.00     81831.60       0.42      36.3M    21%    40%   1765158.30         4.64%
+  path-trie    gnulib-hash  2                 8.00     76536.60       0.74      40.9M    11%    33%   1941403.60         3.94%
+  path-trie    gnulib-hash  1.4142           16.00    191847.30       0.74      40.9M    11%    33%   2080593.30         9.22%
+  plain-set    linear-hash  1.4142           21.00    450632.60       0.55      52.3M   -14%    14%   1091933.90        41.27%
+  plain-set    linear-hash  2                11.00    256006.50       0.39      54.7M   -19%    10%    851114.70        30.08%
+  plain-set    gnulib-hash  2                 9.00    250185.70       0.72      60.7M   -33%     0%    839642.40        29.80%
+  plain-set    gnulib-hash  1.4142           18.00    619380.40       0.71      60.9M   -33%     0%   1230303.30        50.34%
+
+  # path-set-test-grep command #5:
+  $ path-set-test-grep -Fe \
+  --input=tests/files2.txt --exclude=separators --include=rehash-size \
+  --stat-{rehash-op,real-{rehash,insert}-time,hash-load,total-mem=+} \
+  --not --config-32bit --not --config-path-trie-32bit-offsets|norm|rehash-time-percents
+  struct-type  set-type     rehash-size  rehash-op  rehash-time  hash-load  total-mem  45.8M  75.0M  insert-time  rehash-time%
+  plain-set    linear-hash  1.4142           21.00    483546.90       0.55      58.1M   -27%    23%    970459.40        49.83%
+  path-trie    linear-hash  1.4142           19.00    156719.90       0.59      62.6M   -37%    17%   1746296.70         8.97%
+  plain-set    linear-hash  2                11.00    275778.40       0.39      62.8M   -37%    16%    734747.50        37.53%
+  path-trie    linear-hash  2                10.00     89982.40       0.42      64.9M   -42%    13%   1651287.00         5.45%
+  path-trie    gnulib-hash  2                 8.00     93127.20       0.74      74.6M   -63%     1%   1831716.70         5.08%
+  path-trie    gnulib-hash  1.4142           16.00    225388.60       0.74      74.6M   -63%     1%   2007985.60        11.22%
+  plain-set    gnulib-hash  2                 9.00    285691.50       0.71      74.8M   -63%     0%    817930.30        34.93%
+  plain-set    gnulib-hash  1.4142           18.00    709333.70       0.71      75.2M   -64%     0%   1250328.60        56.73%
+
+  # path-set-test-grep command #6:
+  $ path-set-test-grep -Fe \
+  --input=tests/files2.txt --exclude=separators --include=rehash-size \
+  --stat-{rehash-op,real-{rehash,insert}-time,hash-load,total-mem=+} \
+  --not --config-32bit --config-path-trie-32bit-offsets|norm|rehash-time-percents
+  struct-type  set-type     rehash-size  rehash-op  rehash-time  hash-load  total-mem  45.8M  75.0M  insert-time  rehash-time%
+  path-trie    linear-hash  1.4142           19.00    133890.10       0.59      49.2M    -7%    34%   1732483.60         7.73%
+  path-trie    linear-hash  2                10.00     80284.90       0.42      50.4M   -10%    33%   1649962.70         4.87%
+  plain-set    linear-hash  1.4142           21.00    477651.70       0.55      58.1M   -27%    23%    951747.00        50.19%
+  plain-set    linear-hash  2                11.00    276564.50       0.39      62.8M   -37%    16%    737366.60        37.51%
+  path-trie    gnulib-hash  2                 8.00     89563.90       0.74      70.0M   -53%     7%   1901229.80         4.71%
+  path-trie    gnulib-hash  1.4142           16.00    217354.40       0.74      70.0M   -53%     7%   2080720.40        10.45%
+  plain-set    gnulib-hash  2                 9.00    287437.90       0.71      74.8M   -63%     0%    807691.40        35.59%
+  plain-set    gnulib-hash  1.4142           18.00    700296.00       0.71      75.2M   -64%     0%   1236471.60        56.64%
+
+Note that the six command lines above use two of the newly added options of shell
+function 'path-set-test-grep': `--exclude=separators' and `--include=rehash-size'.
+First one tells the shell function to exclude from its output the column having
+the name 'separators': this column is redundant since all the test series above
+have been issued with `--separators' receiving its default value, '/'. The other
+option -- `--include=rehash-size' -- was telling 'path-set-test-grep' to include
+the respective column in its output table. These options were needed since the
+default set of columns 'path-set-test-grep' produces is comprised of 'input' and
+'separators' columns.
+
+
+4. Comparing Rehash Size Factors
+================================
+
+The sixth column of the tables in section 1 unveil that when comes to rehash a
+hash table data structure, multiplying its size by the factor 1.4142 is always
+better for what it concerns the memory consumption. The next six tables reveal
+most clearly the trade-off between memory consumption and load up time between
+'path-set' instances running linear hash path tries having different only their
+'rehash-size' factor.
+
+  $ alias norm='norm -b 1-31,37-'
+
+  # path-set-test-grep-ex [-d] [-r <num>[KMG],<num>] <arg>...
+  $ path-set-test-grep-ex() {
+    local self='path-set-test-grep-ex'
+    local x='eval'
+    [ "$1" == '-d' ] &&
+    { x='echo'; shift; }
+    local m=''; local t=''
+    local n='[0-9]+\.[0-9]+'
+    local p="(${n}[KMG]),($n)"
+    [ "${1:0:2}" == '-r' ] && {
+        [[ "$1" =~ ^-r$p$ || "$1" == '-r' && "$2" =~ ^$p$ ]] ||
+        { error -i -A "${1:2}$2" -Pr; return 1; }
+        m="${BASH_REMATCH[1]}"
+        t="${BASH_REMATCH[2]}"
+        [ "$1" == '-r' ] &&
+        shift
+        shift
+    }
+    local c="path-set-test-grep -Fe \
+  --exclude=separators --include=rehash-size \
+  --stat-{real-insert-time${t:+=$t},total-mem${m:+=$m}} \
+  --path-trie --linear-hash $@"
+    $x "$c"; }
+
+Grepping criteria `--config-32bit', i.e. 32-bit platform using plain pointers:
+
+  $ path-set-test-grep-ex -r 17.2M,925187.50 --input=tests/files.txt \
+  --config-32bit|norm
+  rehash-size  total-mem  17.2M  insert-time  925187.50
+  1.4142           17.2M     0%    925187.50         0%
+  2                17.8M    -3%    881051.90         5%
+
+  $ path-set-test-grep-ex -r 35.1M,1862457.00 --input=tests/files2.txt \
+  --config-32bit|norm
+  rehash-size  total-mem  35.1M  insert-time  1862457.00
+  1.4142           35.1M     0%   1862457.00          0%
+  2                36.3M    -3%   1765158.30          5%
+
+Grepping criteria `--not --config-32bit --not --config-path-trie-32bit-offsets',
+i.e. 64-bit platform using plain pointers: 
+
+  $ path-set-test-grep-ex -r 30.4M,890215.20 --input=tests/files.txt \
+  --not --config-32bit --not --config-path-trie-32bit-offsets|norm
+  rehash-size  total-mem  30.4M  insert-time  890215.20
+  1.4142           30.4M     0%    890215.20         0%
+  2                31.6M    -4%    828663.50         7%
+
+  $ path-set-test-grep-ex -r 62.6M,1746296.70 --input=tests/files2.txt \
+  --not --config-32bit --not --config-path-trie-32bit-offsets|norm
+  rehash-size  total-mem  62.6M  insert-time  1746296.70
+  1.4142           62.6M     0%   1746296.70          0%
+  2                64.9M    -4%   1651287.00          5%
+
+Grepping criteria `--not --config-32bit --config-path-trie-32bit-offsets', i.e.
+64-bit platform not using plain (64-bit) pointers but 32-bit offsets:
+
+  $ path-set-test-grep-ex -r 24.5M,858454.60 --input=tests/files.txt \
+  --not --config-32bit --config-path-trie-32bit-offsets|norm
+  rehash-size  total-mem  24.5M  insert-time  858454.60
+  1.4142           24.5M     0%    858454.60         0%
+  2                25.1M    -2%    809102.20         6%
+
+  $ path-set-test-grep-ex -r 49.2M,1732483.60 --input=tests/files2.txt \
+  --not --config-32bit --config-path-trie-32bit-offsets|norm
+  rehash-size  total-mem  49.2M  insert-time  1732483.60
+  1.4142           49.2M     0%   1732483.60          0%
+  2                50.4M    -2%   1649962.70          5%
+
+Note that the argument of option `-r' of shell function 'path-set-test-grep-ex'
+above is of form 'VALUE1,VALUE2' where 'VALUE1' is always chosen as the value
+of stat parameter 'total-mem' corresponding to linear hash path trie structures
+and to parameter 'rehash-size' of value 1.4142, while 'VALUE2' -- as the value
+of stat parameter 'real-insert-time' corresponding to the same structures and
+the same value of parameter 'rehash-size'.
+
+The data displayed above indicate a loss of 'total-mem' from 2% to 4% for a gain
+of 'insert-time' from 5% to 7% comparing linear hash path tries having parameter
+'rehash-size' set to 2 and, respectively, to 1.4142. (When 'rehash-size' is set
+to 1.4142 -- the square root of 2 with four exact digits -- a linear hash table
+data structure doubles its size every second time rehashing itself.)
+
+
+5. Comparing Linear and Gnulib Hash Tables
+==========================================
+
+This section is devoted to a prima facie comparison between the linear hash and
+the gnulib hash dictionary types of Path-Set with regards to the speed by which
+these structures load up their input.
+
+For starters, let define a shell function 'path-set-test-grep-ex'. This will be
+used for querying the files in 'tests/2016-10-20' for timings data.
+
+  $ alias norm='norm -b 1-37,43-55,61-'
+
+  # path-set-test-grep-ex [-d] <arg>...
+  $ path-set-test-grep-ex() {
+    local self='path-set-test-grep-ex'
+    local x='eval'
+    [ "$1" == '-d' ] &&
+    { x='echo'; shift; }
+    local a='
+    function column_error(n)
+    {
+        printf("'"$self"': error: internal: " \
+            "column \x22%s\x22 not found\n", n) \
+            > "/dev/stderr"
+        error = 1
+        exit 1
+    }
+    function percents(x, t)
+    { return sprintf("%.2f%%", (t - x) / t * 100) }
+    function record_line(	k)
+    {
+        if (FNR == 1) {
+            for (k = 1; k <= NF; k ++) {
+                if ($k == "set-type")
+                    S = k
+                if ($k == "real-insert-time")
+                    I = k
+            }
+            if (S == 0)
+                column_error("set-type")
+            if (I == 0)
+                column_error("real-insert-time")
+        }
+        else {
+            if ($S == "gnulib-hash" &&
+                T == 0 || $I < T)
+                T = $I
+        }
+        L[N ++] = $0
+    }
+    function print_table(	w, k, n, a)
+    {
+        w = length(T)
+        for (k = 0; k < N; k ++) {
+            n = split(L[k], a)
+            printf("%s  %*s\n", L[k], w, \
+                k == 0 ? T : percents(a[I], T))
+        }
+    }
+    END { if (!error) print_table() }
+    { record_line() }'
+    local c="path-set-test-grep -Fe \
+  --exclude=separators --include=rehash-size \
+  --stat-{rehash-op,real-{rehash,insert}-time} $@|
+    sort -k5g,5 -s|
+    awk '$a'"
+    $x "$c"; }
+
+Having shell function 'path-set-test-grep-ex' at hand, let issue it for each set
+type, each input file used and each relevant combination of `--config-*' options.
+First, for 'plain-set' set types:
+
+  # path-set-test-grep-ex command #1:
+  $ path-set-test-grep-ex --plain-set --input=tests/files.txt \
+  --config-32bit|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  428887.90
+  gnulib-hash  2                 8.00    128607.90    428887.90      0.00%
+  linear-hash  2                10.00    134460.90    478267.50    -11.51%
+  linear-hash  1.4142           19.00    233935.30    608999.20    -41.99%
+  gnulib-hash  1.4142           16.00    312073.70    620571.40    -44.69%
+
+  # path-set-test-grep-ex command #2:
+  $ path-set-test-grep-ex --plain-set --input=tests/files.txt \
+  --not --config-32bit --not --config-path-trie-32bit-offsets|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  422588.70
+  linear-hash  2                10.00    144812.60    393161.80      6.96%
+  gnulib-hash  2                 8.00    149710.40    422588.70      0.00%
+  linear-hash  1.4142           19.00    252000.50    510217.10    -20.74%
+  gnulib-hash  1.4142           16.00    368846.20    649100.10    -53.60%
+
+  # path-set-test-grep-ex command #3:
+  $ path-set-test-grep-ex --plain-set --input=tests/files.txt \
+  --not --config-32bit --config-path-trie-32bit-offsets|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  413610.50
+  linear-hash  2                10.00    145262.70    391578.70      5.33%
+  gnulib-hash  2                 8.00    148190.30    413610.50      0.00%
+  linear-hash  1.4142           19.00    252700.80    511666.80    -23.71%
+  gnulib-hash  1.4142           16.00    361861.30    633901.50    -53.26%
+
+  # path-set-test-grep-ex command #4:
+  $ path-set-test-grep-ex --plain-set --input=tests/files2.txt \
+  --config-32bit|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  839642.40
+  gnulib-hash  2                 9.00    250185.70    839642.40      0.00%
+  linear-hash  2                11.00    256006.50    851114.70     -1.37%
+  linear-hash  1.4142           21.00    450632.60   1091933.90    -30.05%
+  gnulib-hash  1.4142           18.00    619380.40   1230303.30    -46.53%
+
+  # path-set-test-grep-ex command #5:
+  $ path-set-test-grep-ex --plain-set --input=tests/files2.txt \
+  --not --config-32bit --not --config-path-trie-32bit-offsets|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  817930.30
+  linear-hash  2                11.00    275778.40    734747.50     10.17%
+  gnulib-hash  2                 9.00    285691.50    817930.30      0.00%
+  linear-hash  1.4142           21.00    483546.90    970459.40    -18.65%
+  gnulib-hash  1.4142           18.00    709333.70   1250328.60    -52.86%
+
+  # path-set-test-grep-ex command #6:
+  $ path-set-test-grep-ex --plain-set --input=tests/files2.txt \
+  --not --config-32bit --config-path-trie-32bit-offsets|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  807691.40
+  linear-hash  2                11.00    276564.50    737366.60      8.71%
+  gnulib-hash  2                 9.00    287437.90    807691.40      0.00%
+  linear-hash  1.4142           21.00    477651.70    951747.00    -17.84%
+  gnulib-hash  1.4142           18.00    700296.00   1236471.60    -53.09%
+
+Second, for 'path-trie' set types:
+
+  # path-set-test-grep-ex command #7:
+  $ path-set-test-grep-ex --path-trie --input=tests/files.txt \
+  --config-32bit|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  965057.70
+  linear-hash  2                 9.00     38285.70    881051.90      8.70%
+  linear-hash  1.4142           17.00     66207.20    925187.50      4.13%
+  gnulib-hash  2                 7.00     34289.30    965057.70      0.00%
+  gnulib-hash  1.4142           14.00     85034.60   1031603.00     -6.90%
+
+  # path-set-test-grep-ex command #8:
+  $ path-set-test-grep-ex --path-trie --input=tests/files.txt \
+  --not --config-32bit --not --config-path-trie-32bit-offsets|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  917527.80
+  linear-hash  2                 9.00     45124.80    828663.50      9.69%
+  linear-hash  1.4142           17.00     77754.70    890215.20      2.98%
+  gnulib-hash  2                 7.00     44029.80    917527.80      0.00%
+  gnulib-hash  1.4142           14.00    108792.10   1012131.70    -10.31%
+
+  # path-set-test-grep-ex command #9:
+  $ path-set-test-grep-ex --path-trie --input=tests/files.txt \
+  --not --config-32bit --config-path-trie-32bit-offsets|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  947596.20
+  linear-hash  2                 9.00     34147.40    809102.20     14.62%
+  linear-hash  1.4142           17.00     54897.40    858454.60      9.41%
+  gnulib-hash  2                 7.00     38817.10    947596.20      0.00%
+  gnulib-hash  1.4142           14.00     98269.60   1021091.50     -7.76%
+
+  # path-set-test-grep-ex command #10:
+  $ path-set-test-grep-ex --path-trie --input=tests/files2.txt \
+  --config-32bit|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  1941403.60
+  linear-hash  2                10.00     81831.60   1765158.30       9.08%
+  linear-hash  1.4142           19.00    145798.80   1862457.00       4.07%
+  gnulib-hash  2                 8.00     76536.60   1941403.60       0.00%
+  gnulib-hash  1.4142           16.00    191847.30   2080593.30      -7.17%
+
+  # path-set-test-grep-ex command #11:
+  $ path-set-test-grep-ex --path-trie --input=tests/files2.txt \
+  --not --config-32bit --not --config-path-trie-32bit-offsets|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  1831716.70
+  linear-hash  2                10.00     89982.40   1651287.00       9.85%
+  linear-hash  1.4142           19.00    156719.90   1746296.70       4.66%
+  gnulib-hash  2                 8.00     93127.20   1831716.70       0.00%
+  gnulib-hash  1.4142           16.00    225388.60   2007985.60      -9.62%
+
+  # path-set-test-grep-ex command #12:
+  $ path-set-test-grep-ex --path-trie --input=tests/files2.txt \
+  --not --config-32bit --config-path-trie-32bit-offsets|norm
+  set-type     rehash-size  rehash-op  rehash-time  insert-time  1901229.80
+  linear-hash  2                10.00     80284.90   1649962.70      13.22%
+  linear-hash  1.4142           19.00    133890.10   1732483.60       8.88%
+  gnulib-hash  2                 8.00     89563.90   1901229.80       0.00%
+  gnulib-hash  1.4142           16.00    217354.40   2080720.40      -9.44%
+
+Constricting the twelve tables above to the following two tables, one can more
+easily grasp the relationships between the 'linear-hash' and 'gnulib-hash' set
+types (the former was encoded by 'l', the latter by 'g', 'rehash-size' of value
+1.4142 by '1' and 'rehash-size' of value 2 by '2'; column 'cmd' contains indices
+of the 'path-set-test-grep' command lines above):
+
+  cmd      plain set        cmd      path trie
+  ---  -----------------    ---  -----------------
+   1   g2 < l2 < l1 < g1     7   l2 < l1 < g2 < g1 
+   2   l2 < g2 < l1 < g1     8   l2 < l1 < g2 < g1 
+   3   l2 < g2 < l1 < g1     9   l2 < l1 < g2 < g1 
+   4   g2 < l2 < l1 < g1    10   l2 < l1 < g2 < g1 
+   5   l2 < g2 < l1 < g1    11   l2 < l1 < g2 < g1 
+   6   l2 < g2 < l1 < g1    12   l2 < l1 < g2 < g1 
+
+First to notice is that the gnulib hash tables employing a rehash size factor of
+value 1.4142 is slower than any other combination of set type, struct type and
+rehash size factor within each of the rows shown by these two compacted tables.
+
+Second to notice is that in the group of path trie dictionary types, the linear
+hash ones using a rehash size of 1.4142 are faster than the gnulib hash ones,
+regardless of which rehash size factor the latter ones used. The statistics data
+shows that linear hash path tries are faster than gnulib hash path tries by a
+margin from 2% to 9%. (One should recall that a rehash size factor of value 2
+implies half as many rehashing operations than the one of value 1.4142.)
+
+For dictionaries of type 'plain-set' -- the linear hash table or the Gnulib's
+hash table structures themselves, without any path element structure on top of
+them -- the compacted tables above indicate a more intricate relation between
+the two structures.
+
+Finally, must remark with emphasis that the considerations made above have to be
+taken with a grain of salt. The speed timings data is not conclusive as coming
+out of an analysis of two cases only.
+
+
