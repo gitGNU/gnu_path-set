@@ -93,9 +93,9 @@ tests which are documented in the next section.
 
 The 'path-set' binaries were compiled with the stock GCC version 4.3.4. 
 
-The tests ran on a GNU/Linux 64-bit Intel x86 CPU machine, on two sets of file
-path names obtained from running 'find' on two private file systems. These sets
-of file path names will be referred to by the following names: 'tests/files.txt'
+The tests ran on a GNU/Linux 64-bit Intel Core I5-3210M (Ivy Bridge) CPU machine,
+on two sets of file path names obtained from running 'find' on two private file
+systems -- which will be referred to by the following names: 'tests/files.txt'
 and 'tests/files2.txt'. The number of path names contained in and, respectively,
 the size of these text files are as shown:
 
