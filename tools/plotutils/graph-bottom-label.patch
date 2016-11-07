@@ -1,0 +1,299 @@
+--- graph/extern.h	2016-11-02 14:36:42.000000000 +0200
++++ graph/extern.h	2016-11-02 14:33:32.000000000 +0200
+@@ -87,7 +87,7 @@
+ 
+ extern void end_graph (Multigrapher *multigrapher);
+ 
+-extern void set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const char *frame_color, const char *title, const char *title_font_name, double title_font_size, bool force_title, double tick_size, grid_type grid_spec, double x_min, double x_max, double x_spacing, double y_min, double y_max, double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width, double height, double up, double right, const char *x_font_name, double x_font_size, const char *x_label, const char *y_font_name, double y_font_size, const char *y_label, bool no_rotate_y_label, int log_axis, int round_to_next_tick, int switch_axis_end, int omit_labels, int clip_mode, double blankout_fraction, bool transpose_axes);
++extern void set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const char *frame_color, const char *title, const char *title_font_name, double title_font_size, bool force_title, const char *note, const char *note_font_name, double note_font_size, double tick_size, grid_type grid_spec, double x_min, double x_max, double x_spacing, double y_min, double y_max, double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width, double height, double up, double right, const char *x_font_name, double x_font_size, const char *x_label, const char *y_font_name, double y_font_size, const char *y_label, bool no_rotate_y_label, int log_axis, int round_to_next_tick, int switch_axis_end, int omit_labels, int clip_mode, double blankout_fraction, bool transpose_axes);
+ 
+ extern void draw_frame_of_graph (Multigrapher *multigrapher, bool draw_canvas);
+ 
+--- graph/graph.c	2016-11-02 14:36:42.000000000 +0200
++++ graph/graph.c	2016-11-02 14:35:23.000000000 +0200
+@@ -32,7 +32,7 @@
+ #define	ARG_REQUIRED	1
+ #define	ARG_OPTIONAL	2
+ 
+-const char *optstring = "-BCHOQVstE:F:f:g:h:k:K:I:l:L:m:N:q:R:r:T:u:w:W:c:X:Y:a::x::y::S::"; /* initial hyphen requests no reordering */
++const char *optstring = "-BCHOQVstE:F:f:g:h:k:K:I:l:L:m:M:N:q:R:r:T:u:w:W:c:X:Y:a::x::y::S::"; /* initial hyphen requests no reordering */
+ 
+ struct option long_options[] =
+ {
+@@ -65,6 +65,7 @@
+   {"toggle-transpose-axes",	ARG_NONE,	NULL, 't'},
+   {"toggle-use-color",	ARG_NONE,	NULL, 'C'},
+   {"top-label",		ARG_REQUIRED,	NULL, 'L'},
++  {"bottom-label",		ARG_REQUIRED,	NULL, 'M'},
+   {"force-top-label",		ARG_NONE,	NULL, 'A' << 8},
+   {"upward-shift",      ARG_REQUIRED,	NULL, 'u'},
+   {"width-of-plot",	ARG_REQUIRED,	NULL, 'w'},
+@@ -86,6 +87,8 @@
+   {"symbol-font-name",	ARG_REQUIRED,	NULL, 'G' << 8},
+   {"title-font-name",	ARG_REQUIRED,	NULL, 'Z' << 8},
+   {"title-font-size",	ARG_REQUIRED,	NULL, 'F' << 8},
++  {"note-font-name",	ARG_REQUIRED,	NULL, 'N' << 8},
++  {"note-font-size",	ARG_REQUIRED,	NULL, 'S' << 8},
+   {"legend",            ARG_REQUIRED,   NULL, 'L' << 8},
+   {"place-legend",      ARG_REQUIRED,   NULL, 'O' << 8},
+   {"legend-font-size",  ARG_REQUIRED,   NULL, 'Q' << 8},
+@@ -223,6 +226,7 @@
+   double tick_size = .02;	/* size of tick marks (< 0.0 allowed) */
+   double font_size = 0.0525;	/* fontsize */
+   double title_font_size = 0.07; /* title fontsize */
++  double note_font_size = 0.035; /* note fontsize */
+   double legend_font_size = 0.035; /* title fontsize */
+   double blankout_fraction = 1.3; /* this fraction of size of plotting box
+ 				   is erased before the plot is drawn */
+@@ -230,12 +234,14 @@
+   /* text-related */
+   const char *font_name = NULL;	/* font name, NULL -> device default */
+   const char *title_font_name = NULL; /* title font name, NULL -> default */
++  const char *note_font_name = NULL; /* note font name, NULL -> default */
+   const char *symbol_font_name = "ZapfDingbats"; /* symbol font name, NULL -> default */
+   const char *line_color = ""; /* line color, default */
+   const char *x_label = NULL;	/* label for the x axis, NULL -> no label */
+   const char *y_label = NULL;	/* label for the y axis, NULL -> no label */
+   const char *top_label = NULL;	/* title above the plot, NULL -> no title */
+   bool force_top_label = false;	/* force rendering title above the plot */
++  const char *bottom_label = NULL;	/* note below the plot, NULL -> no note */
+ 
+   /* user-specified limits on the axes */
+   double min_x = 0.0, min_y = 0.0, max_x = 0.0, max_y = 0.0;
+@@ -251,7 +257,8 @@
+   int local_grid_style;
+   int local_symbol_index;
+   int local_clip_mode;
+-  double local_symbol_size, local_font_size, local_title_font_size, local_legend_font_size;
++  double local_symbol_size, local_font_size, local_title_font_size,
++	local_note_font_size, local_legend_font_size;
+   double local_frame_line_width, local_plot_line_width;
+   double local_min_x, local_min_y;
+   double local_max_x, local_max_y;
+@@ -642,6 +649,9 @@
+ 	case 'Z' << 8:		/* Title Font name, ARG REQUIRED      */
+ 	  title_font_name = xstrdup (optarg);
+ 	  break;
++	case 'N' << 8:		/* Note Font name, ARG REQUIRED      */
++	  note_font_name = xstrdup (optarg);
++	  break;
+ 	case 'G' << 8:		/* Symbol Font name, ARG REQUIRED      */
+ 	  symbol_font_name = xstrdup (optarg);
+ 	  new_symbol_font_name = true;
+@@ -667,6 +677,9 @@
+ 	case 'L':		/* Top title, ARG REQUIRED	*/
+ 	  top_label = xstrdup (optarg);
+ 	  break;
++	case 'M':		/* Bottom note, ARG REQUIRED	*/
++	  bottom_label = xstrdup (optarg);
++	  break;
+ 	case 'A' << 8:		/* Force Top title	*/
+ 	  force_top_label = true;
+ 	  break;
+@@ -753,6 +766,26 @@
+ 	  else
+ 	    title_font_size = local_title_font_size;
+ 	  break;
++	case 'S' << 8:		/* Note font size, ARG REQUIRED	*/
++	  if (sscanf (optarg, "%lf", &local_note_font_size) <= 0)
++	    {
++	      fprintf (stderr,
++		       "%s: error: the font size for the note should be a number, but it was `%s'\n",
++		       progname, optarg);
++	      errcnt++;
++	    }
++	  else if (local_note_font_size >= 1.0)
++	    fprintf (stderr, "%s: the too-large note font size `%f' is disregarded (it should be less than 1.0)\n",
++		     progname, local_note_font_size);
++	  else if (local_note_font_size < 0.0)
++	    fprintf (stderr, "%s: the negative note font size `%f' is disregarded\n",
++		     progname, local_note_font_size);
++	  if (local_note_font_size == 0.0)
++	    fprintf (stderr, "%s: the request for a zero note font size is disregarded\n",
++		     progname);
++	  else
++	    note_font_size = local_note_font_size;
++	  break;
+ 	case 'Q' << 8:		/* Legend font size, ARG REQUIRED	*/
+ 	  if (sscanf (optarg, "%lf", &local_legend_font_size) <= 0)
+ 	    {
+@@ -1093,6 +1126,8 @@
+ 		  /* font selection, saves typing */
+ 		  if ((title_font_name == NULL) && (font_name != NULL))
+ 		    title_font_name = font_name;
++		  if ((note_font_name == NULL) && (font_name != NULL))
++		    note_font_name = font_name;
+ 	      
+ 		  /* initialize, using (in part) finalized arguments */
+ 		  set_graph_parameters (multigrapher,
+@@ -1101,6 +1136,8 @@
+ 					top_label,
+ 					title_font_name, title_font_size, /* for title */
+ 					force_top_label,
++					bottom_label,
++					note_font_name, note_font_size, /* for note */
+ 					tick_size, grid_spec,
+ 					final_min_x, final_max_x, final_spacing_x,
+ 					final_min_y, final_max_y, final_spacing_y,
+@@ -1313,6 +1350,8 @@
+ 		  /* font selection, saves typing */
+ 		  if ((title_font_name == NULL) && (font_name != NULL))
+ 		    title_font_name = font_name;
++		  if ((note_font_name == NULL) && (font_name != NULL))
++		    note_font_name = font_name;
+ 	      
+ 		  /* following will be in effect for the entire plot */
+ 		  set_graph_parameters (multigrapher,
+@@ -1321,6 +1360,8 @@
+ 					top_label,
+ 					title_font_name, title_font_size, /* for title */
+ 					force_top_label,
++					bottom_label,
++					note_font_name, note_font_size, /* for note */
+ 					tick_size, grid_spec,
+ 					final_min_x, final_max_x, final_spacing_x,
+ 					final_min_y, final_max_y, final_spacing_y,
+@@ -1562,6 +1603,8 @@
+ 	  /* font selection, saves typing */
+ 	  if ((title_font_name == NULL) && (font_name != NULL))
+ 	    title_font_name = font_name;
++	  if ((note_font_name == NULL) && (font_name != NULL))
++	    note_font_name = font_name;
+ 	      
+ 	  set_graph_parameters (multigrapher,
+ 				frame_line_width,
+@@ -1569,6 +1612,8 @@
+ 				top_label,
+ 				title_font_name, title_font_size, /*for title*/
+ 				force_top_label,
++				bottom_label,
++				note_font_name, note_font_size, /*for note*/
+ 				tick_size, grid_spec,
+ 				final_min_x, final_max_x, final_spacing_x,
+ 				final_min_y, final_max_y, final_spacing_y,
+--- graph/plotter.c	2016-11-02 14:36:42.000000000 +0200
++++ graph/plotter.c	2016-11-02 14:33:32.000000000 +0200
+@@ -289,6 +289,9 @@
+   const char *title_font_name;	/* font for graph title */
+   double title_font_size;	/* fractional height of graph title */
+   bool force_title;		/* force redering graph title */
++  const char *note;		/* graph note */
++  const char *note_font_name;	/* font for graph note */
++  double note_font_size;	/* fractional height of graph note */
+   int clip_mode;		/* 0, 1, or 2 (cf. clipping in gnuplot) */
+   /* following elements are updated during plotting of points; they're the
+      chief repository for internal state */
+@@ -805,6 +808,9 @@
+      const char *title 		= graph title
+      const char *title_font_name = font for graph title (string)
+      double title_font_size 	= font size for graph title
++     const char *note 		= graph note
++     const char *note_font_name = font for graph note (string)
++     double note_font_size 	= font size for graph note
+      double tick_size 		= fractional size of ticks
+      grid_type grid_spec 	= gridstyle (and tickstyle) spec
+      double x_min, x_max, x_spacing
+@@ -830,7 +836,7 @@
+      double blankout_fraction	= 1.0 means blank out whole box before plot
+      bool transpose_axes */
+ void 
+-set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const char *frame_color, const char *title, const char *title_font_name, double title_font_size, bool force_title, double tick_size, grid_type grid_spec, double x_min, double x_max, double x_spacing, double y_min, double y_max, double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width, double height, double up, double right, const char *x_font_name, double x_font_size, const char *x_label, const char *y_font_name, double y_font_size, const char *y_label, bool no_rotate_y_label, int log_axis, int round_to_next_tick, int switch_axis_end, int omit_ticks, int clip_mode, double blankout_fraction, bool transpose_axes)
++set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const char *frame_color, const char *title, const char *title_font_name, double title_font_size, bool force_title, const char *note, const char *note_font_name, double note_font_size, double tick_size, grid_type grid_spec, double x_min, double x_max, double x_spacing, double y_min, double y_max, double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width, double height, double up, double right, const char *x_font_name, double x_font_size, const char *x_label, const char *y_font_name, double y_font_size, const char *y_label, bool no_rotate_y_label, int log_axis, int round_to_next_tick, int switch_axis_end, int omit_ticks, int clip_mode, double blankout_fraction, bool transpose_axes)
+ {
+   double x_subsubtick_spacing = 0.0, y_subsubtick_spacing = 0.0;
+   /* local portmanteau variables */
+@@ -983,6 +989,15 @@
+     multigrapher->title_font_name = NULL;
+   multigrapher->title_font_size = title_font_size;
+   multigrapher->force_title = force_title;
++  if (note != NULL)
++    multigrapher->note = xstrdup (note);
++  else
++    multigrapher->note = NULL;
++  if (note_font_name != NULL)
++      multigrapher->note_font_name = xstrdup (note_font_name);
++  else
++    multigrapher->note_font_name = NULL;
++  multigrapher->note_font_size = note_font_size;
+   multigrapher->tick_size = tick_size;
+   multigrapher->subtick_size = RELATIVE_SUBTICK_SIZE * tick_size;
+   multigrapher->grid_spec = grid_spec;
+@@ -1078,8 +1093,8 @@
+ }
+ 
+    	
+-/* draw_frame_of_graph() plots the graph frame (grid plus axis labels and
+-   title), using the multigrapher's variables (the multigrapher->x_axis,
++/* draw_frame_of_graph() plots the graph frame (grid plus axis labels, title
++   and note), using the multigrapher's variables (the multigrapher->x_axis,
+    multigrapher->y_axis, multigrapher->x_trans, multigrapher->y_trans
+    structures).  It comprises several almost-independent tasks:
+ 
+@@ -1096,6 +1111,7 @@
+       if ordinate is a logarithmic axis
+    7. draw axis label on abscissa
+    8. draw axis label on ordinate (normally rotated 90 degrees)
++   9. draw note, if any, below drawing box
+ 
+    A savestate()--restorestate() pair is wrapped around these nine tasks.
+    They are not quite independent because in (4) and (6) we keep track of
+@@ -1116,6 +1132,8 @@
+ {
+   static bool tick_warning_printed = false; /* when too few labelled ticks */
+ 
++  double x_axis_font_size = 0.0, x_ordinate = NAN;
++
+   /* wrap savestate()--restorestate() around all 9 tasks */
+   pl_savestate_r (multigrapher->plotter); 
+ 
+@@ -1816,7 +1834,6 @@
+       if ((multigrapher->grid_spec != NO_AXES)
+       && multigrapher->x_axis.label != NULL && multigrapher->x_axis.label != '\0')
+     {
+-      double x_axis_font_size;
+       double xloc;
+ 
+       /* switch to our font for drawing x axis label and tick labels */
+@@ -1902,6 +1919,7 @@
+       if (!multigrapher->x_axis.switch_axis_end)
+ 	{
+ 	  pl_fmove_r (multigrapher->plotter,
++		      x_ordinate =
+ 		      XN (multigrapher->x_axis.other_axis_loc)
+ 		      - (libplot_has_font_metrics ?
+ 			 (SS((multigrapher->tick_size >= 0.0 ? 0.75 : 1.75) 
+@@ -1931,6 +1949,7 @@
+       else
+ 	{
+ 	  pl_fmove_r (multigrapher->plotter, 
++		      x_ordinate =
+ 		      XN (multigrapher->x_axis.alt_other_axis_loc)
+ 		      + (libplot_has_font_metrics ?
+ 			 (SS((multigrapher->tick_size >= 0.0 ? 0.75 : 1.75) 
+@@ -1959,6 +1978,26 @@
+ 	}
+     }
+ 
++  /* 9.  DRAW THE NOTE, I.E. THE BOTTOM LABEL */
++
++  if (multigrapher->grid_spec != NO_AXES
++      && multigrapher->note != NULL && *multigrapher->note != '\0')
++    {
++      /* switch to our font for drawing x axis label and tick labels */
++      pl_fontname_r (multigrapher->plotter, multigrapher->note_font_name);
++      pl_ffontsize_r (multigrapher->plotter, SS(multigrapher->note_font_size));
++
++      pl_fmove_r (multigrapher->plotter,
++		  !isnan (x_ordinate) ? x_ordinate : XP (0.0626),
++		  YV (multigrapher->y_axis.min_tick_count
++			* multigrapher->y_axis.tick_spacing)
++		      - 2.25 * (SS ((multigrapher->tick_size >= 0.0 ? 0.875 : 2.125)
++			     * fabs(multigrapher->tick_size))
++			 + (6 * x_axis_font_size) / 5
++			 + multigrapher->half_line_width));
++      pl_alabel_r (multigrapher->plotter, 'l', 't', multigrapher->note);
++    }
++
+   /* END OF TASKS */
+ 
+   /* flush frame to device */

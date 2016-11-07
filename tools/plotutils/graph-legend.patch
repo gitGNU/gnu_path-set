@@ -1,0 +1,915 @@
+--- configure.ac
++++ configure.ac
+@@ -64,6 +64,8 @@ fi
+ # Note: this can apparently alter CFLAGS, on a few platforms, e.g., on
+ # SCO OpenServer 5 (i.e. *-*-sco3.2v5*), "-belf" is added.
+ AC_PROG_LIBTOOL
++AC_PROG_CC_C99
++AC_PROG_CXX
+ 
+ # Determine extension (e.g. ".exe") on executables, if any.
+ AC_EXEEXT
+--- graph/extern.h
++++ graph/extern.h
+@@ -41,6 +41,7 @@ typedef struct
+ 		     0-31: a marker number, or 32-up: a character. */
+   double symbol_size;	/* symbol size, as frac. of size of plotting area */
+   const char *symbol_font_name; /* font from which symbols >= 32 are taken */
++  const char *line_color; /* explicitly replace color in linemode */
+   int linemode;		/* linemode of polyline (<0 means no polyline) */
+   double line_width;	/* line width as fraction of size of the display */
+   double fill_fraction;	/* in interval [0,1], <0 means polyline isn't filled */
+@@ -94,24 +95,41 @@ extern void plot_point (Multigrapher *multigrapher, const Point *point);
+ 
+ extern void plot_point_array (Multigrapher *multigrapher, const Point *p, int length);
+ 
++typedef struct
++{
++  Point point;
++  char const * label;
++} Legend;
++
++extern void plot_legend (Multigrapher *multigrapher, Legend *legends, int length, double x, double y, double font_size);
++extern void add_legend (Legend **legends, int *length, const Point *point, char const *label);
++
++
+ extern void end_polyline_and_flush (Multigrapher *multigrapher);
+ 
+ /*----------------- prototypes for functions in reader.h -------------------*/
+ 
+ typedef struct ReaderStruct Reader;
+ 
+-extern Reader * new_reader (FILE *input, data_type input_type, bool auto_abscissa, double delta_x, double abscissa, bool transpose_axes, int log_axis, bool auto_bump, int symbol, double symbol_size, const char *symbol_font_name, int linemode, double line_width, double fill_fraction, bool use_color);
++extern Reader * new_reader (FILE *input, data_type input_type, bool auto_abscissa, double delta_x, double abscissa, bool transpose_axes, int log_axis, bool auto_bump, int symbol, double symbol_size, const char *symbol_font_name, const char *line_color, int linemode, double line_width, double fill_fraction, bool use_color);
+ 
+ extern void delete_reader (Reader *reader);
+ 
+ extern void read_file (Reader *reader, Point **p, int *length, int *no_of_points);
+ 
+-extern void read_and_plot_file (Reader *reader, Multigrapher *multigrapher);
++extern void read_and_plot_file (Reader *reader, Multigrapher *multigrapher, int *no_of_points, bool *new_legend_label, Legend **legends, int *no_of_legends, char const *legend_label);
+ 
+-extern void alter_reader_parameters (Reader *reader, FILE *input, data_type input_type, bool auto_abscissa, double delta_x, double abscissa, int symbol, double symbol_size, const char *symbol_font_name, int linemode, double line_width, double fill_fraction, bool use_color, bool new_symbol, bool new_symbol_size, bool new_symbol_font_name, bool new_linemode, bool new_line_width, bool new_fill_fraction, bool new_use_color);
++extern void alter_reader_parameters (Reader *reader, FILE *input, data_type input_type, bool auto_abscissa, double delta_x, double abscissa, int symbol, double symbol_size, const char *symbol_font_name, const char *line_color, int linemode, double line_width, double fill_fraction, bool use_color, bool new_symbol, bool new_symbol_size, bool new_symbol_font_name, bool new_line_color, bool new_linemode, bool new_line_width, bool new_fill_fraction, bool new_use_color);
+ 
+ /*----------------- prototypes for functions in misc.h -------------------*/
+ 
+ extern void array_bounds (const Point *p, int length, bool transpose_axes, int clip_mode, double *min_x, double *min_y, double *max_x, double *max_y, bool spec_min_x, bool spec_min_y, bool spec_max_x, bool spec_max_y);
+ 
+ /*------------------------------------------------------------------------*/
++
++/*
++  Local Variables:
++  c-file-style: "gnu"
++  tab-width: 8
++  End:
++*/
+--- graph/graph.c
++++ graph/graph.c
+@@ -32,7 +32,7 @@
+ #define	ARG_REQUIRED	1
+ #define	ARG_OPTIONAL	2
+ 
+-const char *optstring = "-BCHOQVstE:F:f:g:h:k:K:I:l:L:m:N:q:R:r:T:u:w:W:X:Y:a::x::y::S::"; /* initial hyphen requests no reordering */
++const char *optstring = "-BCHOQVstE:F:f:g:h:k:K:I:l:L:m:N:q:R:r:T:u:w:W:c:X:Y:a::x::y::S::"; /* initial hyphen requests no reordering */
+ 
+ struct option long_options[] =
+ {
+@@ -50,6 +50,7 @@ struct option long_options[] =
+   {"input-format",	ARG_REQUIRED,	NULL, 'I'},
+   {"line-mode",		ARG_REQUIRED,	NULL, 'm'},
+   {"line-width",	ARG_REQUIRED,	NULL, 'W'},
++  {"line-color",	ARG_REQUIRED,	NULL, 'c'},
+   {"right-shift",	ARG_REQUIRED,	NULL, 'r'},
+   {"save-screen",	ARG_NONE,	NULL, 's'},
+   {"symbol",		ARG_OPTIONAL,	NULL, 'S'}, /* 0 or 1 or 2 */
+@@ -84,6 +85,9 @@ struct option long_options[] =
+   {"symbol-font-name",	ARG_REQUIRED,	NULL, 'G' << 8},
+   {"title-font-name",	ARG_REQUIRED,	NULL, 'Z' << 8},
+   {"title-font-size",	ARG_REQUIRED,	NULL, 'F' << 8},
++  {"legend",            ARG_REQUIRED,   NULL, 'L' << 8},
++  {"place-legend",      ARG_REQUIRED,   NULL, 'O' << 8},
++  {"legend-font-size",  ARG_REQUIRED,   NULL, 'Q' << 8},
+   {"page-size",		ARG_REQUIRED,	NULL, 'P' << 8},
+   /* Options relevant only to raw graph (refers to plot(5) output) */
+   {"portable-output",	ARG_NONE,	NULL, 'O'},
+@@ -111,6 +115,15 @@ static void close_file (char *filename, FILE *stream);
+ static void open_file_for_reading (char *filename, FILE **input);
+ static bool parse_pen_string (const char *pen_s);
+ 
++void
++add_legend (Legend **legends, int *length, const Point *point, char const *label)
++{
++    ++(*length);
++    *legends = (Legend *)xrealloc (*legends, *length * sizeof (Legend));
++    memcpy(&((*legends)[*length-1].point), point, sizeof (Point));
++    (*legends)[*length-1].label = xstrdup(label);
++}
++
+ int
+ main (int argc, char *argv[])
+ {
+@@ -130,6 +143,7 @@ main (int argc, char *argv[])
+   bool new_symbol = false;
+   bool new_symbol_size = false;
+   bool new_symbol_font_name = false;
++  bool new_line_color = false;
+   bool new_linemode = false;
+   bool new_plot_line_width = false;
+   bool new_fill_fraction = false;
+@@ -154,6 +168,14 @@ main (int argc, char *argv[])
+   double fill_fraction = -1.0;	/* negative means regions aren't filled */
+   bool use_color = false;	/* color / monochrome */
+ 
++  bool new_legend_label = false;
++  const char *legend_label = NULL;
++  /* points used for legend */
++  Legend *legends = (Legend *)xmalloc (0);
++  int no_of_legends = 0;
++  double place_legend_x = 1.;
++  double place_legend_y = 1.;
++
+   /* Variables related to both the point reader and the point plotter */
+ 
+   bool transpose_axes = false;	/* true means -x applies to y axis, etc. */
+@@ -200,6 +222,7 @@ main (int argc, char *argv[])
+   double tick_size = .02;	/* size of tick marks (< 0.0 allowed) */
+   double font_size = 0.0525;	/* fontsize */
+   double title_font_size = 0.07; /* title fontsize */
++  double legend_font_size = 0.035; /* title fontsize */
+   double blankout_fraction = 1.3; /* this fraction of size of plotting box
+ 				   is erased before the plot is drawn */
+ 
+@@ -207,6 +230,7 @@ main (int argc, char *argv[])
+   const char *font_name = NULL;	/* font name, NULL -> device default */
+   const char *title_font_name = NULL; /* title font name, NULL -> default */
+   const char *symbol_font_name = "ZapfDingbats"; /* symbol font name, NULL -> default */
++  const char *line_color = ""; /* line color, default */
+   const char *x_label = NULL;	/* label for the x axis, NULL -> no label */
+   const char *y_label = NULL;	/* label for the y axis, NULL -> no label */
+   const char *top_label = NULL;	/* title above the plot, NULL -> no title */
+@@ -225,12 +249,13 @@ main (int argc, char *argv[])
+   int local_grid_style;
+   int local_symbol_index;
+   int local_clip_mode;
+-  double local_symbol_size, local_font_size, local_title_font_size;
++  double local_symbol_size, local_font_size, local_title_font_size, local_legend_font_size;
+   double local_frame_line_width, local_plot_line_width;
+   double local_min_x, local_min_y;
+   double local_max_x, local_max_y;
+   double local_spacing_x, local_spacing_y;
+   double local_fill_fraction;
++  double local_place_legend;
+   
+   /* `finalized' arguments to set_graph_parameters() (computed at the time
+      the first file of a graph is seen, and continuing in effect over the
+@@ -344,6 +369,10 @@ main (int argc, char *argv[])
+ 	  new_use_color = true;
+ 	  use_color = (use_color == true ? false : true);
+ 	  break;
++        case 'L' << 8:
++          new_legend_label = true;
++       	  legend_label = xstrdup (optarg);
++          break;
+ 	case 'H':		/* Toggle frame-on-top, ARG NONE */
+ 	  frame_on_top = (frame_on_top == true ? false : true);
+ 	  break;
+@@ -546,6 +575,10 @@ main (int argc, char *argv[])
+ 	      errcnt++;
+ 	    }
+ 	  break;
++        case 'c':               /* Color, ARG REQUIRED          */
++	  new_line_color = true;
++	  line_color = xstrdup (optarg);
++	  break;
+ 	case 'q':		/* Fill fraction, ARG REQUIRED	*/
+ 	  if (sscanf (optarg, "%lf", &local_fill_fraction) <= 0)
+ 	    {
+@@ -715,6 +748,26 @@ main (int argc, char *argv[])
+ 	  else
+ 	    title_font_size = local_title_font_size;
+ 	  break;
++	case 'Q' << 8:		/* Legend font size, ARG REQUIRED	*/
++	  if (sscanf (optarg, "%lf", &local_legend_font_size) <= 0)
++	    {
++	      fprintf (stderr,
++		       "%s: error: the font size for the legend should be a number, but it was `%s'\n",
++		       progname, optarg);
++	      errcnt++;
++	    }
++	  else if (local_legend_font_size >= 1.0)
++	    fprintf (stderr, "%s: the too-large legend font size `%f' is disregarded (it should be less than 1.0)\n",
++		     progname, local_legend_font_size);
++	  else if (local_legend_font_size < 0.0)
++	    fprintf (stderr, "%s: the negative legend font size `%f' is disregarded\n",
++		     progname, local_legend_font_size);
++	  if (local_legend_font_size == 0.0)
++	    fprintf (stderr, "%s: the request for a zero legend font size is disregarded\n",
++		     progname);
++	  else
++	    legend_font_size = local_legend_font_size;
++	  break;
+ 	case 'W' << 8:		/* Frame line width, ARG REQUIRED	*/
+ 	  if (sscanf (optarg, "%lf", &local_frame_line_width) <= 0)
+ 	    {
+@@ -749,9 +802,33 @@ main (int argc, char *argv[])
+ 	  frame_color = xstrdup (optarg);
+ 	  break;
+ 
+-	  
+ 	  /*------ options with zero or more arguments ---------*/
+ 
++        case 'O' << 8:
++          optind--; /* ?? */
++	  if (optind >= argc)
++            break;
++          if (sscanf (argv[optind], "%lf", &local_place_legend) <= 0)
++            break;
++          place_legend_x = local_place_legend;
++	  if (place_legend_x<0. || place_legend_x>1.)
++	    {
++	      fprintf (stderr, "%s: error: place_legend x out of [0 1]: %s\n", progname, argv[optind]);
++	      return EXIT_FAILURE;
++	    }
++	  optind++;	/* tell getopt we recognized place_legend_x */
++	  if (optind >= argc)
++            break;
++          if (sscanf (argv[optind], "%lf", &local_place_legend) <= 0)
++            break;
++          place_legend_y = local_place_legend;
++	  if (place_legend_y<0. || place_legend_y>1.)
++	    {
++	      fprintf (stderr, "%s: error: place_legend y out of [0 1]: %s\n", progname, argv[optind]);
++	      return EXIT_FAILURE;
++	    }
++	  optind++;	/* tell getopt we recognized place_legend_y */
++	  break;
+ 	case 'a':		/* Auto-abscissa, ARG OPTIONAL [0,1,2] */
+ 	  auto_abscissa = true;
+ 	  if (optind >= argc)
+@@ -1023,7 +1100,8 @@ main (int argc, char *argv[])
+ 					final_min_y, final_max_y, final_spacing_y,
+ 					final_spec_spacing_x,
+ 					final_spec_spacing_y,
+-					plot_width, plot_height, margin_below, margin_left,
++					plot_width, plot_height,
++                                        margin_below, margin_left,
+ 					font_name, font_size, /* for abs. label */
+ 					x_label, 
+ 					font_name, font_size, /* for ord. label */
+@@ -1046,6 +1124,7 @@ main (int argc, char *argv[])
+ 	      
+ 		  /* plot the laboriously read-in array */
+ 		  plot_point_array (multigrapher, p, no_of_points);
++                  plot_legend (multigrapher, legends, no_of_legends, place_legend_x, place_legend_y, legend_font_size);
+ 	      
+ 		  /* free points array */
+ 		  free (p);
+@@ -1272,10 +1351,11 @@ main (int argc, char *argv[])
+ 					  (they set dataset attributes) */
+ 				       symbol_index, symbol_size,
+ 				       symbol_font_name,
++                                       line_color,
+ 				       linemode_index, plot_line_width, 
+ 				       fill_fraction, use_color);
+ 		  new_symbol = new_symbol_size = new_symbol_font_name = false;
+-		  new_linemode = new_plot_line_width = false;
++		  new_line_color = new_linemode = new_plot_line_width = false;
+ 		  new_fill_fraction = new_use_color = false;
+ 		}
+ 	      else
+@@ -1290,22 +1370,24 @@ main (int argc, char *argv[])
+ 					      attributes */
+ 					   symbol_index, symbol_size, 
+ 					   symbol_font_name,
++                                           line_color,
+ 					   linemode_index, plot_line_width, 
+ 					   fill_fraction, use_color,
+ 					   /* following bools make up a mask*/
+ 					   new_symbol, new_symbol_size,
+ 					   new_symbol_font_name,
++                                           new_line_color,
+ 					   new_linemode, new_plot_line_width, 
+ 					   new_fill_fraction, new_use_color);
+ 
+ 		  new_symbol = new_symbol_size = new_symbol_font_name = false;
+-		  new_linemode = new_plot_line_width = false;
++		  new_line_color = new_linemode = new_plot_line_width = false;
+ 		  new_fill_fraction = new_use_color = false;
+ 		}
+     
+ 	      /* call read_and_plot_file() on the file; each dataset in the
+ 		 file yields a polyline */
+-	      read_and_plot_file (reader, multigrapher);
++	      read_and_plot_file (reader, multigrapher, &no_of_points, &new_legend_label, &legends, &no_of_legends, legend_label);
+ 
+ 	    } /* end of filter case */
+ 	  
+@@ -1331,10 +1413,11 @@ main (int argc, char *argv[])
+ 					  (they set dataset attributes) */
+ 				       symbol_index, symbol_size,
+ 				       symbol_font_name,
++                                       line_color,
+ 				       linemode_index, plot_line_width, 
+ 				       fill_fraction, use_color);
+ 		  new_symbol = new_symbol_size = new_symbol_font_name = false;
+-		  new_linemode = new_plot_line_width = false;
++		  new_line_color = new_linemode = new_plot_line_width = false;
+ 		  new_fill_fraction = new_use_color = false;
+ 		}
+ 	      else	/* not first file of plot, but do some things anyway */
+@@ -1348,21 +1431,27 @@ main (int argc, char *argv[])
+ 					      attributes */
+ 					   symbol_index, symbol_size, 
+ 					   symbol_font_name,
++                                           line_color,
+ 					   linemode_index, plot_line_width, 
+ 					   fill_fraction, use_color,
+ 					   /* following bools make up a mask*/
+ 					   new_symbol, new_symbol_size,
+ 					   new_symbol_font_name,
++                                           new_line_color,
+ 					   new_linemode, new_plot_line_width, 
+ 					   new_fill_fraction, new_use_color);
+ 
+ 		  new_symbol = new_symbol_size = new_symbol_font_name = false;
+-		  new_linemode = new_plot_line_width = false;
++		  new_line_color = new_linemode = new_plot_line_width = false;
+ 		  new_fill_fraction = new_use_color = false;
+ 		}
+ 	      
+ 	      /* add points to points array by calling read_file() on file */
++          int old_no_of_points = no_of_points;
+ 	      read_file (reader, &p, &points_length, &no_of_points);
++          if (new_legend_label && no_of_points>old_no_of_points)
++            add_legend (&legends, &no_of_legends, &p[no_of_points-1], legend_label);
++          new_legend_label = false;
+ 
+ 	    } /* end of not-filter case */
+ 
+@@ -1425,7 +1514,7 @@ main (int argc, char *argv[])
+      graph currently in progress, if it's nonempty (i.e. if one or more
+      files have been read). */
+ 
+-  if (first_file_of_graph == false)
++  if (!first_file_of_graph)
+     {
+       /* At least one file was read.  If we're acting as a real-time
+ 	 filter, then the graph is already drawn on the display and there's
+@@ -1508,6 +1597,9 @@ main (int argc, char *argv[])
+ 
+ 	} /* end of not-filter case */
+ 
++      /* plot accumulated legend */
++      plot_legend (multigrapher, legends, no_of_legends, place_legend_x, place_legend_y, legend_font_size);
++
+       /* draw graph frame on top of graph, if user requested it */
+       if (frame_on_top)
+ 	{
+@@ -1612,3 +1704,10 @@ parse_pen_string (const char *pen_s)
+     }
+   return true;
+ }
++
++/*
++  Local Variables:
++  c-file-style: "gnu"
++  tab-width: 8
++  End:
++*/
+--- graph/linemode.c
++++ graph/linemode.c
+@@ -40,3 +40,10 @@ const char *colorstyle[NO_OF_LINEMODES] =
+ {
+   "red", "green", "blue", "magenta", "cyan"
+ };
++
++/*
++  Local Variables:
++  c-file-style: "gnu"
++  tab-width: 8
++  End:
++*/
+--- graph/misc.c
++++ graph/misc.c
+@@ -43,11 +43,19 @@ static int compute_relevant_points (double xx, double yy, double oldxx, double o
+ static int compute_outcode (double x, double y, double x_min_clip, double x_max_clip, double y_min_clip, double y_max_clip, bool spec_min_x, bool spec_min_y, bool spec_max_x, bool spec_max_y);
+ 
+ void
++swapd(double * a, double * b)
++{
++  double tmp = *a;
++  *a = *b;
++  *b = tmp;
++}
++
++void
+ array_bounds (const Point *p, int length, 
+ 	      bool transpose_axes, int clip_mode,
+ 	      double *min_x, double *min_y, double *max_x, double *max_y,
+-	      bool spec_min_x, bool spec_min_y, 
+-	      bool spec_max_x, bool spec_max_y)
++              const bool spec_min_x, const bool spec_min_y,
++              const bool spec_max_x, const bool spec_max_y)
+ {
+   /* keep compilers happy */
+   double user_min_x = 0.0, user_min_y = 0.0;
+@@ -83,13 +91,7 @@ array_bounds (const Point *p, int length,
+   
+   /* special case: user specified both bounds, but min > max (reversed axis) */
+   if (spec_min_x && spec_max_x && user_min_x > user_max_x)
+-    {
+-      double tmp;
+-      
+-      tmp = user_min_x;
+-      user_min_x = user_max_x;
+-      user_max_x = tmp;
+-    }
++    swapd (&user_min_x, &user_max_x);
+ 
+   if (spec_min_y)
+     user_min_y = *min_y;
+@@ -102,13 +104,7 @@ array_bounds (const Point *p, int length,
+     
+   /* special case: user specified both bounds, but min > max (reversed axis) */
+   if (spec_min_y && spec_max_y && user_min_y > user_max_y)
+-    {
+-      double tmp;
+-      
+-      tmp = user_min_y;
+-      user_min_y = user_max_y;
+-      user_max_y = tmp;
+-    }
++    swapd (&user_min_y, &user_max_y);
+ 
+   /* loop through points in array; examine each line segment */
+ 
+@@ -265,6 +261,8 @@ compute_relevant_points (double xx, double yy,
+  *
+  * This is a modified C-S clipper: the flags spec_{min,max}_{x,y} indicate
+  * whether or not clipping is to be performed on each edge. 
++
++ TODO refactor with clip_line in plotter.c
+  */
+ 
+ static int
+@@ -302,22 +300,22 @@ clip_line (double *x0_p, double *y0_p, double *x1_p, double *y1_p, double x_min_
+ 	  if (outcode_out & RIGHT)
+ 	    {
+ 	      x = x_max_clip;
+-	      y = y0 + (y1 - y0) * (x_max_clip - x0) / (x1 - x0);
++              y = isinf (x0) ? y1 : y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+ 	    }
+ 	  else if (outcode_out & LEFT)
+ 	    {
+ 	      x = x_min_clip;
+-	      y = y0 + (y1 - y0) * (x_min_clip - x0) / (x1 - x0);
++              y = isinf (x0) ? y1 : y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+ 	    }
+ 	  else if (outcode_out & TOP)
+ 	    {
+-	      x = x0 + (x1 - x0) * (y_max_clip - y0) / (y1 - y0);
+ 	      y = y_max_clip;
++              x = isinf (y0) ? x1 : x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+ 	    }
+ 	  else			/* BOTTOM bit must be set */
+ 	    {
+-	      x = x0 + (x1 - x0) * (y_min_clip - y0) / (y1 - y0);
+ 	      y = y_min_clip;
++              x = isinf (y0) ? x1 : x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+ 	    }
+ 	  
+ 	  if (outcode_out == outcode0)
+@@ -351,19 +349,19 @@ clip_line (double *x0_p, double *y0_p, double *x1_p, double *y1_p, double x_min_
+   return clipval;
+ }
+ 
++/* TODO refactor with clip_line in plotter.c */
+ static int
+ compute_outcode (double x, double y, double x_min_clip, double x_max_clip, double y_min_clip, double y_max_clip, bool spec_min_x, bool spec_min_y, bool spec_max_x, bool spec_max_y)
+ {
+-  int code = 0;
+-
+-  if (spec_max_x && x > x_max_clip)
+-    code |= RIGHT;
+-  else if (spec_min_x && x < x_min_clip)
+-    code |= LEFT;
+-  if (spec_max_y && y > y_max_clip)
+-    code |= TOP;
+-  else if (spec_min_y && y < y_min_clip)
+-    code |= BOTTOM;
+-  
+-  return code;
++  return RIGHT * (spec_max_x && x > x_max_clip)
++    + LEFT * (spec_min_x && x < x_min_clip)
++    + TOP * (spec_max_y && y > y_max_clip)
++    + BOTTOM * (spec_min_y && y < y_min_clip);
+ }
++
++/*
++  Local Variables:
++  c-file-style: "gnu"
++  tab-width: 8
++  End:
++*/
+--- graph/plotter.c
++++ graph/plotter.c
+@@ -38,7 +38,8 @@
+       a symbol type (a small integer, interpreted as a marker type)
+       a symbol size (a fraction of the size of the plotting box)
+       a symbol font name (relevant only for symbol types >= 32)
+-      a linemode (a small integer)
++      a linemode (a small integer; line style unless line_color is empty)
++      a line_color (a string, overrides linemode color unless empty)
+       a linewidth (a fraction of the size of the display device)
+       a polyline fill-fraction (in the interval [0,1], <0 means no fill)
+       a use_color flag (true or false)
+@@ -172,19 +173,23 @@ typedef struct
+ /* Affine transformation macros */
+ 
+ /* X Scale: convert from user x value to normalized x coordinate (floating
+-   point, 0.0 to 1.0). */
++   point, 0.0 to 1.0), and inverse. */
+ #define XS(x) (((x) - multigrapher->x_trans.input_min)/multigrapher->x_trans.input_range)
++#define XSI(x) (((x)*multigrapher->x_trans.input_range) + multigrapher->x_trans.input_min)
+ /* X Reflect: map [0,1] to [1,0], if that's called for */
+ #define XR(x) (multigrapher->x_trans.reverse ? 1.0 - (x) : (x))
+ /* X Squeeze: map [0,1] range for normalized x coordinate into a smaller
+    interval, the x range for the plotting area within the graphics display */
+ #define XSQ(x) (multigrapher->x_trans.squeezed_min + (x) * multigrapher->x_trans.squeezed_range)
++#define XSQI(x) (((x) - multigrapher->x_trans.squeezed_min)/multigrapher->x_trans.squeezed_range)
+ /* X Plot: convert from normalized x coordinate to floating point libplot
+    coordinate. */
+ #define XP(x) (multigrapher->x_trans.output_min + (x) * multigrapher->x_trans.output_range)
++#define XPI(x) (((x) - multigrapher->x_trans.output_min)/multigrapher->x_trans.output_range)
+ /* X Value: convert from user x value (floating point) to floating point
+    libplot coordinate. */
+ #define XV(x) XP(XSQ(XR(XS(x))))
++#define XVI(x) XSI(XR(XSQI(XPI(x))))
+ /* X Normalize: the same, but do not perform reflection if any.  (We use
+    this for plotting of axes and their labels.) */
+ #define XN(y) XP(XSQ(XS(y)))
+@@ -192,17 +197,21 @@ typedef struct
+ /* Y Scale: convert from user y value to normalized y coordinate (floating
+    point, 0.0 to 1.0). */
+ #define YS(y) (((y) - multigrapher->y_trans.input_min)/multigrapher->y_trans.input_range)
++#define YSI(y) (((y)*multigrapher->y_trans.input_range) + multigrapher->y_trans.input_min)
+ /* Y Reflect: map [0,1] to [1,0], if that's called for */
+ #define YR(y) (multigrapher->y_trans.reverse ? 1.0 - (y) : (y))
+ /* Y Squeeze: map [0,1] range for normalized y coordinate into a smaller
+    interval, the y range for the plotting area within the graphics display */
+ #define YSQ(y) (multigrapher->y_trans.squeezed_min + (y) * multigrapher->y_trans.squeezed_range)
++#define YSQI(y) (((y) - multigrapher->y_trans.squeezed_min)/multigrapher->y_trans.squeezed_range)
+ /* Y Plot: convert from normalized y coordinate to floating point libplot
+    coordinate. */
+ #define YP(y) (multigrapher->y_trans.output_min + (y) * multigrapher->y_trans.output_range)
++#define YPI(y) (((y) - multigrapher->y_trans.output_min)/multigrapher->y_trans.output_range)
+ /* Y Value: convert from user y value (floating point) to floating point
+    libplot coordinate.  (We use this for plotting of points.) */
+ #define YV(y) YP(YSQ(YR(YS(y))))
++#define YVI(x) YSI(YR(YSQI(YPI(x))))
+ /* Y Normalize: the same, but do not perform reflection if any.  (We use
+    this for plotting of axes and their labels.) */
+ #define YN(y) YP(YSQ(YS(y)))
+@@ -298,7 +307,7 @@ static void plot_ordinate_log_subsubtick (Multigrapher *multigrapher, double xva
+ static void prepare_axis (Axis *axisp, Transform *trans, double min, double max, double spacing, const char *font_name, double font_size, const char *label, double subsubtick_spacing, bool user_specified_subsubticks, bool round_to_next_tick, bool log_axis, bool reverse_axis, bool switch_axis_end,  bool omit_ticks);
+ static void print_tick_label (char *labelbuf, const Axis *axis, const Transform *transform, double val);
+ static void scale1 (double min, double max, double *tick_spacing, int *tick_spacing_type);
+-static void set_line_style (Multigrapher *multigrapher, int style, bool use_color);
++static void set_line_style (Multigrapher *multigrapher, int style, const char *line_color, bool use_color);
+ static void transpose_portmanteau (int *val);
+ 
+ 
+@@ -864,8 +873,8 @@ set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const
+   if (x_max == x_min)
+     {
+       fprintf (stderr, 
+-	       "%s: identical upper and lower x limits are separated\n",
+-	       progname);
++	       "%s: identical upper and lower x limits (%f, %f) are separated\n",
++	       progname, x_max, x_min);
+       /* separate them */
+       x_max += 1.0;
+       x_min -= 1.0;
+@@ -885,8 +894,8 @@ set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const
+   if (y_max == y_min)
+     {
+       fprintf (stderr, 
+-	       "%s: identical upper and lower y limits are separated\n",
+-	       progname);
++	       "%s: identical upper and lower x limits (%f, %f) are separated\n",
++	       progname, y_max, y_min);
+       /* separate them */
+       y_max += 1.0;
+       y_min -= 1.0;
+@@ -2225,7 +2234,8 @@ plot_ordinate_log_subsubtick (Multigrapher *multigrapher, double yval)
+  * explanation at head of file. */
+ 
+ static void
+-set_line_style (Multigrapher *multigrapher, int style, bool use_color)
++set_line_style (Multigrapher *multigrapher, int style, const char *line_color,
++                bool use_color)
+ {
+   if (!use_color)		/* monochrome */
+     {
+@@ -2248,8 +2258,13 @@ set_line_style (Multigrapher *multigrapher, int style, bool use_color)
+ 
+       if (style > 0)		/* solid lines, various colors */
+ 	{
++          if (line_color && line_color[0])
++            i = (style - 1) % NO_OF_LINEMODES;
++          else
++            {
+ 	  i = ((style - 1) / NO_OF_LINEMODES) % NO_OF_LINEMODES;
+ 	  j = (style - 1) % NO_OF_LINEMODES;
++            }
+ 	  pl_linemod_r (multigrapher->plotter, linemodes[i]);            
+ 	}
+ 
+@@ -2260,7 +2275,9 @@ set_line_style (Multigrapher *multigrapher, int style, bool use_color)
+       else			/* neg. pl_linemode_r (no line will be drawn)*/
+ 	j = (-style - 1) % (NO_OF_LINEMODES - 1);
+ 
+-      pl_colorname_r (multigrapher->plotter, colorstyle[j]);
++      pl_colorname_r (multigrapher->plotter,
++                      line_color && line_color[0] ? line_color
++                                                  : colorstyle[j]);
+     }
+ }
+ 
+@@ -2278,6 +2295,91 @@ plot_point_array (Multigrapher *multigrapher, const Point *p, int length)
+     plot_point (multigrapher, &(p[index]));
+ }
+ 
++void
++plot_legend (Multigrapher *multigrapher, Legend *legends, int length, double x, double y, double font_size)
++{
++  if (length==0)
++    return;
++
++  pl_savestate_r (multigrapher->plotter);
++  pl_fontname_r (multigrapher->plotter, multigrapher->x_axis.font_name);
++  font_size = pl_ffontsize_r (multigrapher->plotter, SS(font_size));
++  double legend_width = 0.;
++  int i;
++  for (i=0; i!=length; ++i)
++    legend_width = fmax(legend_width, pl_flabelwidth_r(multigrapher->plotter, legends[i].label));
++  double posx1 = XP(XSQ(1.0)) - legend_width - font_size*0.5;
++  double posx0 = XP(XSQ(0.0)) + font_size*4.0;
++  x = x * posx1 + (1-x) * posx0;
++  double posy1 = YP(YSQ(1.0)) - font_size*1.0;
++  double posy0 = YP(YSQ(0.0)) + font_size*length;
++  y = y * posy1 + (1-y) * posy0;
++  double xunscale = 1/(XV (1.) - XV (0.));
++  double yunscale = 1/(YV (1.) - YV (0.));
++  double dimx = font_size * xunscale;
++
++  pl_savestate_r (multigrapher->plotter);
++  /* use user-specified background color (if any) instead of white */
++  if (pl_havecap_r (multigrapher->plotter, "SETTABLE_BACKGROUND") != 0
++      && multigrapher->bg_color)
++    pl_colorname_r (multigrapher->plotter, multigrapher->bg_color);
++  else
++    pl_colorname_r (multigrapher->plotter, "white");
++
++  pl_filltype_r (multigrapher->plotter, 1);	/* turn on filling */
++  pl_fbox_r (multigrapher->plotter,
++             x - 3.5*dimx - 0.25*font_size,
++             y - font_size*(length-0.25),
++             x + legend_width + font_size*0.25,
++             y + font_size*0.5);
++  pl_restorestate_r (multigrapher->plotter);
++
++  for (i=0; i!=length; ++i)
++    {
++      Point *p = &(legends[i].point);
++      double ystep = -(i * font_size);
++      int symbol = p->symbol;
++
++      if (p->linemode > 0)
++        {
++          p->y = YVI(y) + ystep*yunscale;
++          p->pendown = false;
++          p->symbol = 0;
++          p->x = XVI(x) - 3.5*dimx;
++          plot_point (multigrapher, p);
++          p->pendown = true;
++          p->symbol = symbol;
++          p->x = XVI(x) - 2*dimx;
++          plot_point (multigrapher, p);
++          p->x = XVI(x) - 0.5*dimx;
++          p->symbol = 0;
++          plot_point (multigrapher, p);
++          p->pendown = false;
++        }
++      else
++        {
++          p->y = YVI(y) + ystep*yunscale;
++          p->pendown = false;
++          p->symbol = 0;
++// @bug not entirely clear: I get spurious dots if linemode is left to 0.
++// $GRAPH --font-name HersheyCyrillic -C -T ps --reposition 0. 0. 1 -m 0 -S 74 0.05 --legend grey -c "#808080" data1 -W 0.005 --legend blue -c blue data2 --legend red%label -m 16 -c red data3 --place-legend 1 > plot.ps && evince plot.ps
++          if (p->linemode == 0)
++            p->linemode = -1;
++          p->x = XVI(x) - 1.0*dimx;
++          plot_point (multigrapher, p);
++          p->pendown = true;
++          p->symbol = symbol;
++          plot_point (multigrapher, p);
++          p->pendown = false;
++        }
++
++      pl_fmove_r (multigrapher->plotter, x, y+ystep);
++      pl_colorname_r (multigrapher->plotter, "black");
++      pl_alabel_r (multigrapher->plotter, 'l', 'c', legends[i].label);
++    }
++  pl_restorestate_r (multigrapher->plotter);
++}
++
+ /* plot_point() plots a single point, including the appropriate symbol and
+  * errorbar(s) if any.  It may call either pl_fcont_r() or pl_fmove_r(),
+  * depending on whether the pendown flag is set or not.  Gnuplot-style
+@@ -2303,7 +2405,8 @@ plot_point (Multigrapher *multigrapher, const Point *point)
+     {
+       int intfill;
+       
+-      set_line_style (multigrapher, point->linemode, point->use_color);
++      set_line_style (multigrapher, point->linemode, point->line_color,
++                      point->use_color);
+ 
+       /* N.B. linewidth < 0.0 means use libplot default */
+       pl_flinewidth_r (multigrapher->plotter, 
+@@ -2514,22 +2617,22 @@ clip_line (Multigrapher *multigrapher, double *x0_p, double *y0_p, double *x1_p,
+ 	  if (outcode_out & RIGHT)	  
+ 	    {
+ 	      x = multigrapher->x_trans.input_max;
+-	      y = y0 + (y1 - y0) * (multigrapher->x_trans.input_max - x0) / (x1 - x0);
++              y = isinf (x0) ? y1 : y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+ 	    }
+ 	  else if (outcode_out & LEFT)
+ 	    {
+ 	      x = multigrapher->x_trans.input_min;
+-	      y = y0 + (y1 - y0) * (multigrapher->x_trans.input_min - x0) / (x1 - x0);
++              y = isinf (x0) ? y1 : y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+ 	    }
+ 	  else if (outcode_out & TOP)
+ 	    {
+-	      x = x0 + (x1 - x0) * (multigrapher->y_trans.input_max - y0) / (y1 - y0);
+ 	      y = multigrapher->y_trans.input_max;
++              x = isinf (y0) ? x1 : x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+ 	    }
+ 	  else
+ 	    {
+-	      x = x0 + (x1 - x0) * (multigrapher->y_trans.input_min - y0) / (y1 - y0);
+ 	      y = multigrapher->y_trans.input_min;
++              x = isinf (y0) ? x1 : x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+ 	    }
+ 	  
+ 	  if (outcode_out == outcode0)
+@@ -2649,3 +2752,10 @@ end_polyline_and_flush (Multigrapher *multigrapher)
+   pl_flushpl_r (multigrapher->plotter);
+   multigrapher->first_point_of_polyline = true;
+ }
++
++/*
++  Local Variables:
++  c-file-style: "gnu"
++  tab-width: 8
++  End:
++*/
+--- graph/reader.c
++++ graph/reader.c
+@@ -119,6 +119,7 @@ struct ReaderStruct		/* point reader datatype */
+   int symbol;			/* symbol type */
+   double symbol_size;		/* symbol size (in `box coordinates') */
+   const char *symbol_font_name;	/* font used for marker types >= 32 */
++  const char *line_color;       /* explicitly replace color in linemode */
+   int linemode;			/* linemode */
+   double line_width;		/* line width (as frac. of display size) */
+   double fill_fraction;		/* in interval [0,1], <0 means no filling */
+@@ -145,7 +146,7 @@ typedef enum { IN_PROGRESS, ENDED_BY_EOF, ENDED_BY_DATASET_TERMINATOR, ENDED_BY_
+ 
+ /* forward references */
+ static bool skip_some_whitespace (FILE *stream);
+-static dataset_status_t read_and_plot_dataset (Reader *reader, Multigrapher *multigrapher);
++static dataset_status_t read_and_plot_dataset (Reader *reader, Multigrapher *multigrapher, int *no_of_points, Point * point);
+ static dataset_status_t read_dataset (Reader *reader, Point **p, int *length, int *no_of_points);
+ static dataset_status_t read_point (Reader *reader, Point *point);
+ static dataset_status_t read_point_ascii (Reader *reader, Point *point);
+@@ -161,7 +162,7 @@ static void skip_all_whitespace (FILE *stream);
+ 	 line_width = fraction of display size
+ 	 fill_fraction = number in range [0,1], <0 means unfilled (transparent)*/
+ Reader *
+-new_reader (FILE *input, data_type format_type, bool auto_abscissa, double delta_x, double abscissa, bool transpose_axes, int log_axis, bool auto_bump, int symbol, double symbol_size, const char *symbol_font_name, int linemode, double line_width, double fill_fraction, bool use_color)
++new_reader (FILE *input, data_type format_type, bool auto_abscissa, double delta_x, double abscissa, bool transpose_axes, int log_axis, bool auto_bump, int symbol, double symbol_size, const char *symbol_font_name, const char *line_color, int linemode, double line_width, double fill_fraction, bool use_color)
+ 
+ {
+   Reader *reader;
+@@ -181,6 +182,7 @@ new_reader (FILE *input, data_type format_type, bool auto_abscissa, double delta
+   reader->symbol = symbol;
+   reader->symbol_size = symbol_size;
+   reader->symbol_font_name = symbol_font_name;
++  reader->line_color = line_color;
+   reader->linemode = linemode;
+   reader->line_width = line_width;
+   reader->fill_fraction = fill_fraction;
+@@ -206,7 +208,7 @@ delete_reader (Reader *reader)
+ 
+ /* ARGS: note that the final new_* args make up a mask */
+ void 
+-alter_reader_parameters (Reader *reader, FILE *input, data_type format_type, bool auto_abscissa, double delta_x, double abscissa, int symbol, double symbol_size, const char *symbol_font_name, int linemode, double line_width, double fill_fraction, bool use_color, bool new_symbol, bool new_symbol_size, bool new_symbol_font_name, bool new_linemode, bool new_line_width, bool new_fill_fraction, bool new_use_color)
++alter_reader_parameters (Reader *reader, FILE *input, data_type format_type, bool auto_abscissa, double delta_x, double abscissa, int symbol, double symbol_size, const char *symbol_font_name, const char *line_color, int linemode, double line_width, double fill_fraction, bool use_color, bool new_symbol, bool new_symbol_size, bool new_symbol_font_name, bool new_line_color, bool new_linemode, bool new_line_width, bool new_fill_fraction, bool new_use_color)
+ {
+   reader->need_break = true;	/* force break in polyline */
+   reader->input = input;
+@@ -222,6 +224,8 @@ alter_reader_parameters (Reader *reader, FILE *input, data_type format_type, boo
+     reader->symbol_size = symbol_size;
+   if (new_symbol_font_name)
+     reader->symbol_font_name = symbol_font_name;
++  if (new_line_color)
++    reader->line_color = line_color;
+   if (new_linemode)
+     reader->linemode = linemode;
+   if (new_line_width)
+@@ -248,6 +252,7 @@ read_point (Reader *reader, Point *point)
+   point->symbol = reader->symbol;
+   point->symbol_size = reader->symbol_size;
+   point->symbol_font_name = reader->symbol_font_name;
++  point->line_color = reader->line_color;
+   point->linemode = reader->linemode;
+   point->line_width = reader->line_width;
+   point->fill_fraction = reader->fill_fraction;
+@@ -338,6 +343,12 @@ read_point (Reader *reader, Point *point)
+ 	    }
+ 	}
+       
++      if (isnan(point->x) || isnan(point->y))
++        {
++          reader->need_break = true;
++          goto head;		/* on to next point */
++        }
++
+       if (reader->transpose_axes)
+ 	{
+ 	  double tmp;
+@@ -888,20 +899,18 @@ skip_all_whitespace (FILE *stream)
+    points are not stored).  */
+ 
+ static dataset_status_t
+-read_and_plot_dataset (Reader *reader, Multigrapher *multigrapher)
++read_and_plot_dataset (Reader *reader, Multigrapher *multigrapher, int *no_of_points, Point * point)
+ {
+   dataset_status_t status;
+ 
+-  for ( ; ; )
++  for (; ; ++(*no_of_points))
+     {
+-      Point point;
+-
+-      status = read_point (reader, &point);
++      status = read_point (reader, point);
+       if (status != IN_PROGRESS)
+ 	/* we didn't get a point, i.e. dataset ended */
+ 	break;
+       else
+-	plot_point (multigrapher, &point);
++        plot_point (multigrapher, point);
+     }
+   
+   return status;
+@@ -912,13 +921,22 @@ read_and_plot_dataset (Reader *reader, Multigrapher *multigrapher)
+    plotting is accomplished in real time (the points are not stored).  */
+ 
+ void
+-read_and_plot_file (Reader *reader, Multigrapher *multigrapher)
++read_and_plot_file (Reader *reader, Multigrapher *multigrapher, int *no_of_points,
++                    bool *new_legend_label, Legend **legends, int *no_of_legends, char const *legend_label)
+ {
+   dataset_status_t status;
+ 
+   do
+     {
+-      status = read_and_plot_dataset (reader, multigrapher);
++      Point point;
++      int old_no_of_points = *no_of_points;
++
++      status = read_and_plot_dataset (reader, multigrapher, no_of_points, &point);
++
++      if (*new_legend_label && *no_of_points>old_no_of_points)
++        add_legend (legends, no_of_legends, &point, legend_label);
++      *new_legend_label = false;
++
+ 
+       /* After each dataset, reset reader: force break in polyline, bump
+ 	 linemode (if auto-bump is in effect), and reset abscissa (if
+@@ -943,3 +961,10 @@ read_and_plot_file (Reader *reader, Multigrapher *multigrapher)
+     }
+   while (status != ENDED_BY_EOF);
+ }
++
++/*
++  Local Variables:
++  c-file-style: "gnu"
++  tab-width: 8
++  End:
++*/

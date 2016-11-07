@@ -1,0 +1,100 @@
+--- graph/extern.h	2016-10-28 21:10:41.000000000 +0300
++++ graph/extern.h	2016-10-30 10:15:55.000000000 +0200
+@@ -87,7 +87,7 @@
+ 
+ extern void end_graph (Multigrapher *multigrapher);
+ 
+-extern void set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const char *frame_color, const char *title, const char *title_font_name, double title_font_size, double tick_size, grid_type grid_spec, double x_min, double x_max, double x_spacing, double y_min, double y_max, double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width, double height, double up, double right, const char *x_font_name, double x_font_size, const char *x_label, const char *y_font_name, double y_font_size, const char *y_label, bool no_rotate_y_label, int log_axis, int round_to_next_tick, int switch_axis_end, int omit_labels, int clip_mode, double blankout_fraction, bool transpose_axes);
++extern void set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const char *frame_color, const char *title, const char *title_font_name, double title_font_size, bool force_title, double tick_size, grid_type grid_spec, double x_min, double x_max, double x_spacing, double y_min, double y_max, double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width, double height, double up, double right, const char *x_font_name, double x_font_size, const char *x_label, const char *y_font_name, double y_font_size, const char *y_label, bool no_rotate_y_label, int log_axis, int round_to_next_tick, int switch_axis_end, int omit_labels, int clip_mode, double blankout_fraction, bool transpose_axes);
+ 
+ extern void draw_frame_of_graph (Multigrapher *multigrapher, bool draw_canvas);
+ 
+--- graph/graph.c	2016-10-28 21:10:41.000000000 +0300
++++ graph/graph.c	2016-10-30 10:32:40.000000000 +0200
+@@ -65,6 +65,7 @@
+   {"toggle-transpose-axes",	ARG_NONE,	NULL, 't'},
+   {"toggle-use-color",	ARG_NONE,	NULL, 'C'},
+   {"top-label",		ARG_REQUIRED,	NULL, 'L'},
++  {"force-top-label",		ARG_NONE,	NULL, 'A' << 8},
+   {"upward-shift",      ARG_REQUIRED,	NULL, 'u'},
+   {"width-of-plot",	ARG_REQUIRED,	NULL, 'w'},
+   {"x-label",		ARG_REQUIRED,	NULL, 'X'},
+@@ -234,6 +235,7 @@
+   const char *x_label = NULL;	/* label for the x axis, NULL -> no label */
+   const char *y_label = NULL;	/* label for the y axis, NULL -> no label */
+   const char *top_label = NULL;	/* title above the plot, NULL -> no title */
++  bool force_top_label = false;	/* force rendering title above the plot */
+ 
+   /* user-specified limits on the axes */
+   double min_x = 0.0, min_y = 0.0, max_x = 0.0, max_y = 0.0;
+@@ -665,6 +667,9 @@
+ 	case 'L':		/* Top title, ARG REQUIRED	*/
+ 	  top_label = xstrdup (optarg);
+ 	  break;
++	case 'A' << 8:		/* Force Top title	*/
++	  force_top_label = true;
++	  break;
+ 	case 'k':		/* Tick size, ARG REQUIRED	*/
+ 	  if (sscanf (optarg, "%lf", &tick_size) <= 0)
+ 	    {
+@@ -1095,6 +1100,7 @@
+ 					frame_color,
+ 					top_label,
+ 					title_font_name, title_font_size, /* for title */
++					force_top_label,
+ 					tick_size, grid_spec,
+ 					final_min_x, final_max_x, final_spacing_x,
+ 					final_min_y, final_max_y, final_spacing_y,
+@@ -1314,6 +1320,7 @@
+ 					frame_color,
+ 					top_label,
+ 					title_font_name, title_font_size, /* for title */
++					force_top_label,
+ 					tick_size, grid_spec,
+ 					final_min_x, final_max_x, final_spacing_x,
+ 					final_min_y, final_max_y, final_spacing_y,
+@@ -1561,6 +1568,7 @@
+ 				frame_color,
+ 				top_label,
+ 				title_font_name, title_font_size, /*for title*/
++				force_top_label,
+ 				tick_size, grid_spec,
+ 				final_min_x, final_max_x, final_spacing_x,
+ 				final_min_y, final_max_y, final_spacing_y,
+--- graph/plotter.c	2016-10-28 21:10:41.000000000 +0300
++++ graph/plotter.c	2016-10-30 10:27:50.000000000 +0200
+@@ -288,6 +288,7 @@
+   const char *title;		/* graph title */
+   const char *title_font_name;	/* font for graph title */
+   double title_font_size;	/* fractional height of graph title */
++  bool force_title;		/* force redering graph title */
+   int clip_mode;		/* 0, 1, or 2 (cf. clipping in gnuplot) */
+   /* following elements are updated during plotting of points; they're the
+      chief repository for internal state */
+@@ -829,7 +830,7 @@
+      double blankout_fraction	= 1.0 means blank out whole box before plot
+      bool transpose_axes */
+ void 
+-set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const char *frame_color, const char *title, const char *title_font_name, double title_font_size, double tick_size, grid_type grid_spec, double x_min, double x_max, double x_spacing, double y_min, double y_max, double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width, double height, double up, double right, const char *x_font_name, double x_font_size, const char *x_label, const char *y_font_name, double y_font_size, const char *y_label, bool no_rotate_y_label, int log_axis, int round_to_next_tick, int switch_axis_end, int omit_ticks, int clip_mode, double blankout_fraction, bool transpose_axes)
++set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const char *frame_color, const char *title, const char *title_font_name, double title_font_size, bool force_title, double tick_size, grid_type grid_spec, double x_min, double x_max, double x_spacing, double y_min, double y_max, double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width, double height, double up, double right, const char *x_font_name, double x_font_size, const char *x_label, const char *y_font_name, double y_font_size, const char *y_label, bool no_rotate_y_label, int log_axis, int round_to_next_tick, int switch_axis_end, int omit_ticks, int clip_mode, double blankout_fraction, bool transpose_axes)
+ {
+   double x_subsubtick_spacing = 0.0, y_subsubtick_spacing = 0.0;
+   /* local portmanteau variables */
+@@ -981,6 +982,7 @@
+   else
+     multigrapher->title_font_name = NULL;
+   multigrapher->title_font_size = title_font_size;
++  multigrapher->force_title = force_title;
+   multigrapher->tick_size = tick_size;
+   multigrapher->subtick_size = RELATIVE_SUBTICK_SIZE * tick_size;
+   multigrapher->grid_spec = grid_spec;
+@@ -1155,7 +1157,8 @@
+   /* 1.  DRAW THE TITLE, I.E. THE TOP LABEL */
+ 
+   if (multigrapher->grid_spec != NO_AXES 
+-      && !multigrapher->y_axis.switch_axis_end /* no title if x axis is at top of plot */
++      && (multigrapher->force_title
++          || !multigrapher->y_axis.switch_axis_end) /* no title if x axis is at top of plot */
+       && multigrapher->title != NULL && *multigrapher->title != '\0')
+     {
+       double title_font_size;
