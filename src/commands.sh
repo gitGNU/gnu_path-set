@@ -74,6 +74,20 @@ quote2()
     eval "$__n__=$__v__"
 }
 
+assign()
+{
+    local __n__
+    local __v__
+
+    [ -z "$1" -o "$1" == "__n__" -o "$1" == "__v__" ] && return 1
+    printf -v __n__ '%q' "$1"
+    test -n "$2" &&
+    printf -v __v__ '%q' "$2"
+    test -z "$SHELL_BASH_QUOTE_TILDE" &&
+    __v__="${__v__//\~/\\~}"
+    eval "$__n__=$__v__"
+}
+
 assign2()
 {
     local __n__
@@ -2485,6 +2499,853 @@ ssed -R '1s/\x1//g'"
         c+="|
 awk -F '\t' '$s2'"
     fi
+    $x "$c"
+}
+
+path-set-test-graph()
+{
+    local self="path-set-test-graph"
+    # stev: boolean params
+    local ghn0='toggle-use-color toggle-frame-on-top toggle-log-x-axis toggle-log-y-axis toggle-x-axis-end toggle-y-axis-end force-top-label'
+    # stev: params with argument
+    local ghn1='output-format page-size symbol font-name font-size grid-style tick-size title-font-size bitmap-size height-of-plot width-of-plot line-mode line-width top-label x-label y-label place-legend legend-font-size bottom-label note-font-size note-font-name'
+    # stev: multi-params -- distributed in sequence to each input series
+    local ghn2='legend'
+    local ghe0="?(no-)@(${ghn0// /|})"
+    local ghe1="@(${ghn1// /|})"
+    local ghe2="@(${ghn2// /|})"
+    local tmpf="/tmp/$self.XXX"
+
+    local x="eval"
+    local act="G"       # actions: \
+                        #  O:print out options (--options)|
+                        #  F:query optional features: `--[place-]legend', `--legend-font-size', `--force-top-label', `--bottom-label' and `--note-font-{name,size}' (--features)|
+                        #  G:generate graph (default) (--graph)
+    local g=""          # define given graph parameter (`-g?' prints out all names and exit) (--graph-[no-]NAME|--graph-NAME=VALUE)
+    local h=""          # use or don't use input table header for setting plot names (default do not) (--[no-]header)
+
+    #
+    # graph parameters
+    #
+    local toggleusecolor='.'
+    local toggleframeontop='.'
+    local togglelogxaxis=''
+    local togglelogyaxis=''
+    local togglexaxisend=''
+    local toggleyaxisend=''
+    local forcetoplabel=''
+    local outputformat='png'
+    local pagesize='a4'
+    local symbol='4 .02'
+    local fontname='HersheySans-Bold'
+    local fontsize='.038'
+    local gridstyle='4'
+    local ticksize='-.01'
+    local titlefontsize='.05'
+    local bitmapsize='700x700'
+    local heightofplot='.7'
+    local widthofplot='.7'
+    local linemode='+'
+    local linewidth='.001'
+    local toplabel='+'
+    local bottomlabel='+'
+    local legend=()
+    local placelegend='+'
+    local legendfontsize='+'
+    local notefontsize='+'
+    local notefontname='+'
+    local xlabel='path-names'
+    local ylabel='percents'
+
+    local n
+    local v
+
+    local opt
+    local OPT
+    local OPTN
+    local opts=":dFg:GhOx-:"
+    local OPTARG
+    local OPTERR=0
+    local OPTIND=1
+    while getopts "$opts" opt; do
+        # discriminate long options
+        optlong
+
+        # translate long options to short ones
+        test -n "$OPT" &&
+        case "$OPT" in
+            features)
+                opt='F' ;;
+            graph-$ghe0)
+                opt='g' ;;
+            graph-$ghe1)
+                opt='g' ;;
+            graph-$ghe2)
+                opt='g' ;;
+            graph)
+                opt='G' ;;
+            header)
+                opt='h' ;;
+            options)
+                opt='O' ;;
+            no-header)
+                h=''
+                continue ;;
+            *)	error --long -o
+                return 1
+                ;;
+        esac
+
+        # check long option argument
+        [[ "$opt" == [g] ]] ||
+        optlongchkarg ||
+        return 1
+
+        # handle short options
+        case "$opt" in
+            d)	x="echo"
+                ;;
+            x)	x="eval"
+                ;;
+            [FGO])
+                act="$opt"
+                ;;
+            [h])
+                optopt
+                ;;
+            g)  [[ -z "$OPT" && "$OPTARG" == '?' ]] && {
+                    echo -e "${ghn0// /\\n}\\n${ghn1// /\\n}\\n${ghn2// /\\n}"|sort
+                    return 0
+                }
+                [[ -n "$OPT" || "$OPTARG" == @($ghe0|$ghe1|$ghe2) ]] || {
+                    error -i
+                    return 1
+                }
+                optlong "graph"
+
+                # stev: note that the values given throught
+                # options like '--graph--NAME=VALUE' do not
+                # get validated: they are passed on as such
+                # to the 'graph' program
+                case "${OPT:6}" in
+                    $ghe0)
+                        [ -n "$OPTN" ] && {
+                            error --long -d
+                            return 1
+                        }
+                        n="${OPT:6}"
+                        test "${n:0:3}" != 'no-' &&
+                        v='.' ||
+                        v=''
+                        test "${n:0:3}" == 'no-' &&
+                        n="${n:3}"
+                        assign "${n//-/}" "$v"
+                        ;;
+                    $ghe1)
+                        [ -z "$OPTN" ] && {
+                            error --long -a
+                            return 1
+                        }
+                        OPT="${OPT:6}"
+                        optarg "${OPT//-/}"
+                        ;;
+                    $ghe2)
+                        [ -z "$OPTN" ] && {
+                            error --long -a
+                            return 1
+                        }
+                        n="${OPT:6}"
+                        n="${n//-/}"
+                        quote2 OPTARG
+                        eval "$n[\${#$n[@]}]=$OPTARG"
+                        ;;
+                    *)	error --long -o
+                        return 1
+                        ;;
+                esac
+                # stev: '--graph-...' implies '--graph'
+                act='G'
+                ;;
+            *)	error --long -g
+                return 1
+                ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    local c
+    if [ "$act" == 'F' ]; then
+        c="\
+graph --help|
+grep -Poe '(?<=\[--)(?:(?:place-)?legend|legend-font-size|note-font-(?:name|size)|bottom-label)(?=\s)|(?<=\[--)force-top-label(?=\])' --color=none ||
+true"
+    elif [[ "$act" == [GO] ]]; then
+        [ "$s" == '+' ] && s=''
+
+        [ "$act" == 'G' ] && {
+            local N=2
+            local t="$tmpf"
+            if [ "$x" == 'eval' ]; then
+                t="$(mktemp "$t")" && [ -n "$t" ] || {
+                    error "inner command failed: mktemp"
+                    exit 1
+                }
+                trap "rm -f $t" RETURN
+
+                H=($(set -o pipefail && tee "$t"|sed -n 1p)) || {
+                    error "inner command failed: tee|sed"
+                    exit 1
+                }
+                N="${#H[@]}"
+                [ "$N" -gt 1 ] || {
+                    error "input table must have at least two columns"
+                    return 1
+                }
+                [ -n "$h" ] && {
+                    xlabel="${H[0]}"
+                    if [ "$N" -eq 2 ]; then
+                        ylabel="${H[1]}"
+                    else
+                        ylabel=""
+                        legend=()
+                        local i
+                        for ((i=0; i<N-1; i++)); do
+                            legend[i]="${H[i+1]}"
+                        done
+                    fi
+                }
+                (( N -- ))
+                sed -i -e 1d "$t" || {
+                    error "inner command failed: sed"
+                    return 1
+                }
+            fi
+            c+='(
+trap '\''rm -f '"$t"\'' EXIT
+
+graph'
+        }
+        for n in $ghn0; do # stev: do not quote $ghn0
+            assign2 v "${n//-/}"
+            [ -z "$v" ] && continue
+            if [[ "$n" =~ ^toggle-log-([xy])-axis$ ]]; then
+                 c+=" \\
+--toggle-log-axis=${BASH_REMATCH[1]}"
+            elif [[ "$n" =~ ^toggle-([xy])-axis-end$ ]]; then
+                c+=" \\
+--toggle-axis-end=${BASH_REMATCH[1]}"
+            else
+                c+=" \\
+--$n"
+            fi
+        done
+        for n in $ghn1; do # stev: do not quote $ghn1
+            assign2 v "${n//-/}"
+            [ "$v" == '+' ] && continue
+            [[ "$n" == @(top|bottom|[xy])-label ]] &&
+            quote2 v
+            # stev: otherwise do not quote $v below!
+            c+=" \\
+--$n $v"
+        done
+
+        [ "$act" == 'O' ] && {
+            quote2 c
+            c="\
+sed -r '1d;s/\s*\\\s*$//' <<< $c"
+        }
+        [ "$act" == 'G' ] && {
+            local k
+            local m
+            local M
+            for ((k=1; k<=N; k++)); do
+                for n in $ghn2; do # stev: do not quote $ghn2
+                    m="${n//-/}"
+                    eval M=\"\${#$m[@]}\"
+                    [ "$M" -gt 0 -a "$N" -ge "$M" ] ||
+                    continue
+                    eval v=\"\${$m[$((k - 1))]}\"
+                    quote2 v
+                    c+=" \\
+    --$n $v"
+                done
+                # stev: no need to quote $t below
+                c+=" \\
+<(awk '{ print \$1, \$$((k + 1)) }' $t)"
+            done
+            c+='
+)'
+
+            [ "$x" == 'eval' ] &&
+            trap - RETURN
+        }
+    else
+        error "internal: unexpected act='$act'"
+        return 1
+    fi
+
+    $x "$c"
+}
+
+path-set-test-percents()
+{
+    local self="path-set-test-percents"
+    # stev: $stal below is a duplicate of $stal in 'path-set-test' above
+    local stal='dups-line uniq-line line-mem dups-elem uniq-elem dups-node uniq-node elem-insert-eq elem-insert-lt elem-insert-gt elem-insert-ne elem-insert-hit elem-realloc-op real-elem-realloc-time user-elem-realloc-time sys-elem-realloc-time node-insert-eq node-insert-lt node-insert-gt node-insert-ne node-insert-hit node-realloc-op real-node-realloc-time user-node-realloc-time sys-node-realloc-time rehash-eq rehash-ne rehash-op rehash-hit real-rehash-time user-rehash-time sys-rehash-time hash-size hash-used hash-load elem-struct-size node-struct-size elem-struct node-struct elem-mem node-mem total-node-mem total-mem real-insert-time user-insert-time sys-insert-time real-lookup-time user-lookup-time sys-lookup-time'
+    local stax="@(${stal// /|})"
+    local spex='@(plain-set|set-type)'
+    local setl='plain-set path-trie'
+    local setx="@(${setl// /|})"
+    local defp='total-mem'
+    local defl='top-left'
+    local defs='path-trie'
+    local defz='500'
+
+    local x="eval"
+    local act="T"       # actions: \
+                        #  N:generate name (--name=table,--name=graph)|
+                        #  S:generate source table (--source[=FILE])|
+                        #  T:generate complete table (default) (--table)|
+                        #  G:generate graph (--graph)
+    local f=""          # force overwrite existing output file when action is '-T' or '-G' (--overwrite[-output])
+    local H=""          # do not output header row when action is '-T' (--no-header)
+    local i="-"         # take input SHA1-named files from given FILE when action is '-T' ('+' means to grep for them using 'path-set-test-grep') (default: '-') (--input=FILE)
+    local o="-"         # output file name when action is '-T' or '-G' ('+' means to generate a name for it) (default: '-') (--output=FILE)
+    local l="+"         # legend place when action is '-G': '{top,bottom}-{left,right}' (default: 'top-left') (--legend-place=STR)
+    local p="+"         # account for the given stat parameter (default: 'total-mem') (`-p?' prints out all names and exit) (--stat-NAME)
+    local r="set-type"  # reference series file name or otherwise compute series relative to 'gnulib-hash' of type 'plain-set' or given by `-s|--set-type' (default: 'set-type') (--ref-series=SHA1NAME|--ref-series=plain-set|--ref-series=set-type)
+    local R=""          # exclude reference series column from output when action is '-T' (--exclude-ref-series)
+    local s="+"         # grep for named set type (default: 'path-trie') (--set-type=NAME|--plain-set|--path-trie)
+    local z="+"         # size of generated PNG image when action is '-G' (default: 500) (--image-size=NUM)
+
+    local arg=''
+
+    local opt
+    local OPT
+    local OPTN
+    local opts=":dfGHi:l:N:o:p:r:Rs:S:Txz:-:"
+    local OPTARG
+    local OPTERR=0
+    local OPTIND=1
+    while getopts "$opts" opt; do
+        # discriminate long options
+        optlong
+
+        # translate long options to short ones
+        test -n "$OPT" &&
+        case "$OPT" in
+            overwrite|overwrite-output)
+                opt='f' ;;
+            graph)
+                opt='G' ;;
+            no-header)
+                opt='H' ;;
+            input)
+                opt='i' ;;
+            legend-place)
+                opt='l' ;;
+            name)
+                opt='N' ;;
+            output)
+                opt='o' ;;
+            stat-$stax)
+                opt='p' ;;
+            ref-series)
+                opt='r' ;;
+            exclude-ref-series)
+                opt='R' ;;
+            set-type|$setx)
+                opt='s' ;;
+            source)
+                opt='S' ;;
+            table)
+                opt='T' ;;
+            image-size)
+                opt='z' ;;
+            *)	error --long -o
+                return 1
+                ;;
+        esac
+
+        # check long option argument
+        [[ "$opt" == [ps] ]] ||
+        optlongchkarg ||
+        return 1
+
+        # handle short options
+        case "$opt" in
+            d)	x="echo"
+                ;;
+            x)	x="eval"
+                ;;
+            [GST])
+                optactarg
+                ;;
+            [fHR])
+                optopt
+                ;;
+            [o])
+                optarg
+                ;;
+            N)	[[ "$OPTARG" == @(table|graph) ]] || {
+                    error --long -i
+                    return 1
+                }
+                optactarg
+                ;;
+            l)	[[ "$OPTARG" == @(+|@(top|bottom)-@(left|right)) ]] || {
+                    error --long -i
+                    return 1
+                }
+                optarg
+                ;;
+            p)	[[ -z "$OPT" && "$OPTARG" == '?' ]] && {
+                    echo -e "${stal// /\\n}"
+                    return 0
+                }
+                [[ -n "$OPT" || "$OPTARG" == $stax ]] || {
+                    error -i
+                    return 1
+                }
+                optlong "stat"
+
+                [[ "${OPT:5}" != $stax ]] && {
+                    error --long -o
+                    return 1
+                }
+                [ -n "$OPTN" ] && {
+                    error --long -d
+                    return 1
+                }
+                p="${OPT:5}"
+                ;;
+            r)	[[ "$OPTARG" =~ ^(plain-set|set-type|[0-9a-f]{40})$ ]] || {
+                    error --long -i
+                    return 1
+                }
+                optarg
+                ;;
+            s)	[[ -n "$OPT" || "$OPTARG" == ${setx/\(/\(set-type|} ]] || {
+                    error -i
+                    return 1
+                }
+                optlong -
+
+                case "${OPT:2}" in
+                    set-type)
+                        [ -n "$OPTN" ] || {
+                            error --long -a
+                            return 1
+                        }
+                        [[ "$OPTARG" == $setx ]] || {
+                            error --long -i
+                            return 1
+                        }
+                        s="$OPTARG"
+                        ;;
+                    $setx)
+                        [ -z "$OPTN" ] || {
+                            error --long -d
+                            return 1
+                        }
+                        s="${OPT:2}"
+                        ;;
+                    *)	error "internal: unexpected OPT='$OPT'"
+                        return 1
+                        ;;
+                esac
+                ;;
+            i)	[ -z "$OPTARG" ] && {
+                    error --long -i
+                    return 1
+                }
+                optarg
+                ;;
+            z)	[[ "$OPTARG" == ^[1-9][0-9]+$ ]] || {
+                    error --long -i
+                    return 1
+                }
+                optarg
+                ;;
+            *)	error --long -g
+                return 1
+                ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    [ "$p" == '+' ] && p="$defp"
+    [ "$s" == '+' ] && s="$defs"
+
+    local n
+    local v
+
+    if [ "$act" == 'T' ]; then
+        [[ "$i" == [-+] || -f "$i" ]] || {
+            error "input file '$i' not found"
+            return 1
+        }
+    fi
+    if [[ "$act" == [NTG] ]]; then
+        if [ "$act" != 'N' -a "$o" == '-' ]; then
+            o=''
+        elif [ "$act" == 'N' -o "$o" == '+' ]; then
+            local I=''
+            local O=''
+            for v in "$@"; do
+                if [ "${v:0:8}" == '--input=' ]; then
+                    [ -z "$I" ] || {
+                        error "multiple \`--input=' options given"
+                        test "$x" == 'eval' && return 1
+                    }
+                    I="${v:8}"
+                else
+                    O+="${O:+ }$v"
+                fi
+            done
+            [ -n "$O" ] || {
+                error "no grepping options given"
+                test "$x" == 'eval' && return 1
+            }
+            for n in I O; do
+                assign2 v "$n" # using $I, $O
+                [ -n "$v" ] || continue
+                v="$(ssed -R '
+                    s/^.*$/\L\0\E/
+                    s/[^0-9a-z+]+/-/g
+                    s/-{2,}/-/g
+                    s/^-//
+                    s/-$//' <<< "$v")" &&
+                [ -n "$v" ] || {
+                    error "inner command failed: ssed"
+                    return 1
+                }
+                assign "$n" "$v" # using $I, $O
+            done
+            o="$s-$p${I:+-$I}-$O."
+            [[ "$act$arg" == @(T|Ntable) ]] &&
+            o+='txt' ||
+            o+='png'
+
+            [ "$act" == 'N' ] && {
+                echo "$o"
+                return 0
+            }
+        fi
+        [ ! -f "$o" -o -n "$f" ] || {
+            error "output file '$o' already exists"
+            test "$x" == 'eval' && return 1
+        }
+        quote o
+    fi
+
+    # stev: from here on: [[ "$act" == [GST] ]] i.e. [ "$act" != 'N' ]
+
+    local e
+    local k
+    local c
+
+    local o1='' # graph has `--legend'
+    local o2='' # graph has `--place-legend'
+    local o3='' # graph has `--legend-font-size'
+    local o4='' # graph has `--force-top-label'
+    local o5='' # graph has `--bottom-label'
+    local o6='' # graph has `--note-font-name'
+    local o7='' # graph has `--note-font-size'
+
+    local cf
+    [[ "$act" == [TG] ]] && cf="\
+path-set-test-grep -Fe --with-filename \\
+--exclude=separators --exclude=input --include=rehash-size \\${@:+
+$@ \\}
+%s|
+sed 1d"
+
+    [ "$act" == 'T' -a "$i" == '+' -o "$act" == 'G' ] &&
+    printf -v c "$cf|sort -k3g,3 -k2,2" "--$s"
+
+    [ "$act" == 'G' ] && {
+        local F2
+        F2=($(path-set-test-graph -F)) || {
+            error "inner command failed: path-set-test-graph -F"
+            return 1
+        }
+        F2="${F2[@]}"
+        e=''
+        k=1
+        for n in \
+            legend \
+            place-legend \
+            legend-font-size \
+            force-top-label \
+            bottom-label \
+            note-font-name \
+            note-font-size
+        do
+            if [[ "$n" == @(${F2// /|}) ]]; then
+                assign o$k '+' # assigning $o1, $o2, $o3, $o4, $o5, $o6, $o7
+            else
+                e+="${e:+, }\`--$n'"
+            fi
+            (( k ++ ))
+        done
+        [ -n "$e" ] && error -w "'graph' program missing options: $e"
+        [ "$act" == 'G' -a -n "$o1" ] && {
+            [ "$x" == 'echo' ] && echo "$c|cut -b 43,56"
+            o1="$(eval "$c"|cut -b 43,56)" && [ -n "$o1" ] || {
+                error "inner command failed: ${c%% *}"
+                test "$x" == 'eval' && return 1
+            }
+        }
+        [ "$act" == 'G' -a -n "$o5" ] && {
+            if [[ "$@" =~ ^\ *(.*)(--input=[^ ]+)(.*)\ *$ ]]; then
+                local v2="${BASH_REMATCH[1]%%+( )}"
+                local v3="${BASH_REMATCH[3]##+( )}"
+                o5='\mk\sp'"$v2${v3:+${v2:+ }}$v3"'\ep\rt\sb'"${BASH_REMATCH[2]}"'\eb'
+            else
+                o5='\mk\sp'"$@"'\ep'
+            fi
+            quote2 o5
+        }
+    }
+
+    [ "$act" == 'T' -a "$i" == '+' -o "$act" == 'G' ] && {
+        c+="|\
+cut -b 1-40|
+$self \\
+--table \\
+--input=- \\${H:+
+--no-header \\}
+--ref-series=$r \\"
+        [[ "$act" == 'G' || "$r" != 'set-type' && -n "$R" ]] && c+="
+--exclude-ref-series \\"
+        c+="
+--stat-$p \\
+--$s"
+        [ "$r" == 'plain-set' ] && c+="${@:+ \\
+-- $@}"
+    }
+
+    if [ "$act" == 'S' ]; then
+        local s2='
+            /^\$\s*path-set-test\s+-p\s*'"$p"'\s+-R\s*\.\.\.\s*$/!b
+            n
+            :0
+            n
+            /^\$/q
+            p
+            b0'
+        local a='{ printf "%s\t%s\n", $1, $4 }'
+        [ "$arg" == '-' ] && arg=''
+        [ -z "$arg" -o -f "$arg" ] || {
+            error "input source file '$arg' not found"
+            test "$x" == 'eval' && return 1
+        }
+        quote arg
+        c="\
+ssed -nR '$s2'${arg:+ $arg}|
+awk '$a'"
+    elif [ "$act" == 'T' -a "$i" != '+' ]; then
+        local N=0
+        local -a F
+        local u=''
+        if [ "$i" != '-' ]; then
+            trap 'exec 3<&-; trap - RETURN' RETURN
+            exec 3< "$i"
+            u='-u3'
+        fi
+        k=1
+        while read $u -r n; do
+            [ -n "$n" ] || {
+                error "#$k: input file name cannot be null"
+                test "$x" == 'eval' && return 1
+            }
+            [[ "$n" =~ ^[0-9a-f]{40}$ ]] || {
+                error "#$k: invalif input file name '$n'"
+                test "$x" == 'eval' && return 1
+            }
+            [ -f "$n" ] || {
+                error "#$k: input file '$n' not found"
+                test "$x" == 'eval' && return 1
+            }
+            F[((N ++))]="$n"
+            (( k ++ ))
+        done
+        [ "$i" != '-' ] &&
+        trap - RETURN
+        [ "$N" -eq 0 ] && return 0
+        local r2
+        if [[ "$r" == $spex ]]; then
+            if [ "$r" == 'set-type' ]; then
+                c="\
+printf '%s\n'"
+                for ((k=0; k<N; k++)); do
+                    # stev: no need to quote ${F[k]} below
+                    c+=" \\
+${F[k]}"
+                done
+                c+="|
+xargs -r grep -lE '^# --$s '|
+xargs -r grep -lE '^# --gnulib-hash '|
+xargs -r grep -lE '^# --rehash-size=1\.4142 '"
+            elif [ "$r" == 'plain-set' ]; then
+                printf -v c "$cf|cut -b 1-40" \
+"--plain-set --gnulib-hash --rehash-size=1.4142"
+            else
+                error "internal: unexpected r='$r'"
+                return 1
+            fi
+            [ "$x" == 'echo' ] && echo "$c"
+            v=($(eval "$c"))
+            e="$?"
+            [ "$e" -eq 0 -o "$e" -eq 123 ] || {
+                error "inner command failed: grep [returned $e]"
+                return 1
+            }
+            n="${#v[@]}"
+            [ "$n" -ne 1 ] && {
+                [ "$n" -eq 0 ] && e='no' || e="too many ($n)"
+                [ "$r" == 'set-type' ] && n="$s" || n='plain-set'
+                error "$e input files matching for \
+\`--$n --gnulib-hash --rehash-size=1.4142'"
+                return 1
+            }
+            r2="${v[0]}"
+        else
+            r2="$r"
+        fi
+        [ "$r" != 'set-type' ] &&
+        F[((N ++))]="$r2"
+        local nltb=$'\n\t'
+        local nltb2=$'\n\t\t'
+        c="\
+$self --stat-$p --source=${F[0]}"
+        local j
+        local f2
+        for ((k=1; k<N; k++)); do
+            f2='1.1,1.2'
+            for ((j=1; j<k; j++)); do
+                f2+=",1.$((j + 2))"
+            done
+            f2+=',2.2'
+            # stev: no need to quote $o and ${F[k]} below
+            c="\
+join -t $'\t' -j1 -e- -a1 -o $f2 \\
+    <(${c//$nltb/$nltb2}) \\
+    <($self --stat-$p --source=${F[k]})"
+        done
+        local h='path-names'
+        for ((k=0; k<N; k++)); do
+            h+="\t${F[k]:0:8}"
+        done
+        local a='
+            BEGIN { OFS = FS }
+            function print_error(s)
+            {
+                printf("'"$self"': error: %s\n", s) \
+                    > "/dev/stderr"
+                error = 1
+                exit 1
+            }
+            function column_error(n)
+            { print_error(sprintf("internal: " \
+                "column \x27%s\x27 not found", n)) }
+            function percents(t, v)
+            { return t ? sprintf("%.2f", (t - v) / t * 100) : "-" }
+            function record_line(	i, t)
+            {
+                if (FNR == 1) {
+                    W[1] = length($1)
+                    for (i = 2; i <= NF; i ++) {
+                        W[i] = length($i)
+                        if (col == $i)
+                            F = i
+                    }
+                    if (F == 0)
+                        column_error(col)
+                }
+                else {
+                    t = $F
+                    for (i = 2; i <= NF; i ++)
+                        $i = percents(t, $i)
+                }
+                L[N ++] = $0
+            }
+            function print_line(a, n)
+            {
+                for (i = 1; i <= n; i ++) {
+                    if (i != F || incl)
+                        printf("%*s", (i > 1 ? 2 : 0) + \
+                            W[i], a[i])
+                    if (i == n)
+                        printf("\n")
+                }
+            }
+            function print_table(	a, n, k)
+            {
+                for (k = int(hdr); k < N; k ++) {
+                    n = split(L[k], a)
+                    print_line(a, n)
+                }
+            }
+            { record_line() }
+            END { if (!error) print_table() }'
+        [ "$r" == 'set-type' -o -z "$R" ] && v=1 || v=0
+        # stev: no need to quote $H, $r2 and $v below
+        c="\
+(
+echo -e '$h'
+$c
+)|
+awk -F '\t' -v hdr=${H:+1} -v col=${r2:0:8} -v incl=$v '$a'"
+    elif [ "$act" == 'T' -a "$i" == '+' ]; then
+        :
+    elif [ "$act" == 'G' ]; then
+        local t="$s-$p"
+        t="$(tr -s '-' ' ' <<< "$t")" && [ -n "$t" ] || {
+            error "inner command failed: tr"
+            return 1
+        }
+        [ "$l" == '+' ] && l="$defl"
+        case "$l" in
+            top-left)
+                l='.05 1' ;;
+            top-right)
+                l='1 1' ;;
+            bottom-left)
+                l='.05 0' ;;
+            bottom-right)
+                l='1 0' ;;
+            *)	error "internal: unexpected l='$l'"
+                return 1
+                ;;
+        esac
+        quote2 l
+        [ "$z" == '+' ] && z="$defz"
+        c+="|
+path-set-test-graph \\
+--graph-toggle-log-x-axis \\"
+        [ -n "$o1" ] && c+="
+--graph-legend={${o1//$'\n'/,}} \\${o2:+
+--graph-place-legend=$l \\}"
+        c+="
+--graph-top-label='$t' \\${o4:+
+--graph-force-top-label \\}${o5:+
+--graph-bottom-label=$o5 \\}${o7:+
+--graph-note-font-size=0.055 \\}
+--graph-bitmap-size=2732x2732|
+convert - -resize ${z}x$z"
+        [ -z "$o" ] && c+=' -'
+    else
+        error "internal: unexpected act='$act'"
+        return 1
+    fi
+
+    [[ "$act" == [T]  && -n "$o" ]] && c+=" >"
+    [[ "$act" == [TG] && -n "$o" ]] && c+=" \\
+$o
+printf '%s\n' $o"
+
     $x "$c"
 }
 
