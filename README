@@ -9,17 +9,20 @@
 Table of Contents
 -----------------
 
-0. Copyright
-1. The Path-Set Program
-   a. The Initiating Problem of Path-Set
-   b. Initial Choices Developing Path-Set
-   c. The Dictionary Data Structures of Path-Set
-2. Making a 'path-set' Binary
-3. Using 'path-set-test' Shell Function
-4. Using 'path-set-test-grep' Shell Function
-5. Appendix: The GNU/Linux Programs Used
-6. Appendix: Links to Json-Type and Gnulib
-7. References
+ 0. Copyright
+ 1. The Path-Set Program
+    a. The Initiating Problem of Path-Set
+    b. Initial Choices Developing Path-Set
+    c. The Dictionary Data Structures of Path-Set
+ 2. Making a 'path-set' Binary
+ 3. Using 'path-set-test' Shell Function
+ 4. Using 'path-set-test-grep' Shell Function
+ 5. Using 'path-set-test-graph' Shell Function
+ 6. Using 'path-set-test-percents' Shell Function
+ 7. Appendix: The GNU/Linux Programs Used
+ 8. Appendix: Links to Json-Type and Gnulib
+ 9. Appendix: Patching the 'graph' Program
+10. References
 
 
 0. Copyright
@@ -149,7 +152,8 @@ chained hash table implementation. The Gnulib's implementation was adapted to
 suit the internal interfaces of Path-Set. Instrumentation code was added for
 collecting statistics and a couple of dependencies were eliminated for to make
 the code functioning outside Gnulib. The differences to the original source
-files can be seen using the procedure described in the Appendix section below.
+files can be seen using the procedure described in section 8, Appendix: Links
+to Json-Type and Gnulib, below.
 
 The 'path-trie's are the ternary search tries of Bentley and Sedgewick [3] with
 their symbols being path elements instead of characters. This is to say that the
@@ -801,9 +805,9 @@ For options of form `--stat-NAME=+', where 'NAME' ends with '-mem', the ouput of
 shell function 'path-set-test-grep' will include two columns beside each column
 named 'NAME'. The names of these two columns are of form 'NUM[.NUM][KMG]'. The
 first name is the average value of the 'line-mem' stat parameter of 'path-set'
-relative to the same grepping criteria that the invoking commmand line defined.
+relative to the same grepping criteria that the invoking command line defined.
 The second name is the average value of the 'NAME' stat parameter of 'path-set'
-relative to the grepping criteria that the invoking commmand line defined, but
+relative to the grepping criteria that the invoking command line defined, but
 restricted to struct type `--plain-set' and set type `--gnulib-hash'. These two
 extra columns attached to column 'NAME' contain percentage values as described
 above for the case of statistics parameter options `--stat-NAME=VALUE', where
@@ -848,7 +852,321 @@ gets generated and executed internally:
   $ path-set-test-grep ... -d|less
 
 
-5. Appendix: The GNU/Linux Programs Used
+5. Using 'path-set-test-graph' Shell Function
+=============================================
+
+Path-Set contains two more programs alongside the three main ones presented so
+far: the shell functions 'path-set-test-graph' and 'path-set-test-percents' --
+also defined in the 'bash' file 'src/commands.sh'.
+
+The shell function 'path-set-test-graph' is a convenient wrapper for the useful
+tool GNU 'plotutils' package provides: that is the 'graph' program.
+
+First thing to note about 'graph' is that the well-functioning of the two shell
+functions 'path-set-test-{graph,percents}' requires that the 'graph' binary be
+built from patched sources as described below in section 9. As a result of this
+patching, 'graph' offers an extended set of features connected to the following
+newly added command line options:
+
+      option & argument      short description
+  -------------------------  -----------------
+  `--legend TEXT'            render out legend text
+  `--place-legend POS'       set position of legend text
+  `--legend-font-size SIZE'  set font size of legend text
+  `--force-top-label'        force rendering out top label (i.e. title)
+  `--bottom-label TEXT'      render out bottom label (i.e. note) text
+  `--note-font-name NAME'    set font name of bottom label
+  `--note-font-size SIZE'    set font size of bottom label
+
+The command line options of 'path-set-test-graph' are as shown below:
+
+  $ funchelp -f commands.sh -c path-set-test-graph --long-wrap-join=auto
+  actions:
+    -O|--options            print out options
+    -F|--features           query optional features: `--[place-]legend',
+                              `--legend-font-size', `--force-top-label',
+                              `--bottom-label' and `--note-font-{name,size}'
+    -G|--graph              generate graph (default)
+  
+  options:
+    -g:|--graph-[no-]NAME   define given graph parameter (`-g?' prints out all
+        --graph-NAME=VALUE    names and exit)
+    -h|--[no-]header        use or don't use input table header for setting plot
+                              names (default do not)
+
+With the exception of action options `-O|--options' and `-F|--features', the
+shell function reads in from 'stdin' a multi-column text table comprising a set
+of datasets to be passed on to 'graph'. Note that 'path-set-test-graph' expects
+that the first row of its input table to contain column names (i.e. sequences
+of non-white-space characters separated by white-spaces). In case of the former
+two action options, the shell function does not read anything from 'stdin'.
+
+The action options of 'path-set-test-graph' produce output as described below:
+
+  ==========================================================================
+  -O|--options
+  --------------------------------------------------------------------------
+  * output: a list of 'graph' command line options along with corresponding
+    arguments (if there are any) which get passed from 'path-set-test-graph'
+    to 'graph'.
+  ==========================================================================
+  -F|--features
+  --------------------------------------------------------------------------
+  * output: a possibly empty subset of the set of 'graph' command line option
+    names listed above by the output of 'funchelp', that are supported by the
+    'graph' binary currently installed.    
+  ==========================================================================
+  -G|--graph
+  --------------------------------------------------------------------------
+  * output: a PNG file containing the plot generated by 'graph' based on the
+    set of input datasets provided on 'stdin' in the form of a text table.
+  ==========================================================================
+
+Specifying any of the `-g:|--graph-[no-]NAME|--graph-NAME=VALUE' options in a
+command line implies that the shell function will switch its action option to
+`-G|--graph', if after the last of such options doesn't follow any other action
+option.
+
+The set of parameters 'path-set-test-graph' passes in to 'graph' is as follows:
+
+  $ path-set-test-graph -g?
+  bitmap-size
+  bottom-label
+  font-name
+  font-size
+  force-top-label
+  grid-style
+  height-of-plot
+  legend
+  legend-font-size
+  line-mode
+  line-width
+  note-font-name
+  note-font-size
+  output-format
+  page-size
+  place-legend
+  symbol
+  tick-size
+  title-font-size
+  toggle-frame-on-top
+  toggle-log-x-axis
+  toggle-log-y-axis
+  toggle-use-color
+  toggle-x-axis-end
+  toggle-y-axis-end
+  top-label
+  width-of-plot
+  x-label
+  y-label
+
+The built-in defaults of 'path-set-test-graph' -- which are passed to 'graph',
+if not set via the corresponding `--graph-[no-]NAME' or `--graph-NAME=VALUE'
+command line options -- are listed below:
+
+  $ path-set-test-graph -O
+  --toggle-use-color
+  --toggle-frame-on-top
+  --output-format png
+  --page-size a4
+  --symbol 4 .02
+  --font-name HersheySans-Bold
+  --font-size .038
+  --grid-style 4
+  --tick-size -.01
+  --title-font-size .05
+  --bitmap-size 700x700
+  --height-of-plot .7
+  --width-of-plot .7
+  --line-width .001
+  --x-label path-names
+  --y-label percents
+
+Similarly to the other shell functions of 'src/commands.sh', the option `-d'
+inserted in a 'path-set-test-graph' command line prints out the text of the
+'bash' script generated and executed internally:
+
+  $ path-set-test-graph ... -d|less
+
+
+6. Using 'path-set-test-percents' Shell Function
+================================================
+
+The 'path-set-test-percents' shell function's main purpose is that of producing
+comparative percents datasets of named statistics parameters between series of
+runs of 'path-set' binary with varying number of input path names, as recorded
+in SHA1-named test result data files.
+
+Briefly, the command line options of 'path-set-test-percents' are the following:
+
+  $ funchelp -f commands.sh -c path-set-test-percents --long-wrap-join=auto
+  actions:
+    -N:|--name=table            generate name
+        --name=graph
+    -S|--source[=FILE]          generate source table
+    -T|--table                  generate complete table (default)
+    -G|--graph                  generate graph
+  
+  options:
+    -f|--overwrite[-output]     force overwrite existing output file when action
+                                  is '-T' or '-G'
+    -H|--no-header              do not output header row when action is '-T'
+    -i|--input=FILE             take input SHA1-named files from given FILE when
+                                  action is '-T' ('+' means to grep for them
+                                  using 'path-set-test-grep') (default: '-')
+    -o|--output=FILE            output file name when action is '-T' or '-G' ('+'
+                                  means to generate a name for it) (default: '-')
+    -l|--legend-place=STR       legend place when action is '-G':
+                                  '{top,bottom}-{left,right}' (default:
+                                  'top-left')
+    -p:|--stat-NAME             account for the given stat parameter (default:
+                                  'total-mem') (`-p?' prints out all names and
+                                  exit)
+    -r:|--ref-series=SHA1NAME   reference series file name or otherwise compute
+        --ref-series=plain-set    series relative to 'gnulib-hash' of type
+        --ref-series=set-type     'plain-set' or given by `-s|--set-type'
+                                  (default: 'set-type')
+    -R|--exclude-ref-series     exclude reference series column from output when
+                                  action is '-T'
+    -s:|--set-type=NAME         grep for named set type (default: 'path-trie')
+        --plain-set
+        --path-trie
+    -z|--image-size=NUM         size of generated PNG image when action is '-G'
+                                  (default: 500)
+
+However, the command lines invoking 'path-set-test-percents' have the following
+actual form:
+
+  $ path-set-test-percents OPTION... [-- GREPPING_OPTION...]
+
+where the grepping options are comprising a set of options which get passed on
+to an inner call of 'path-set-test-grep' as explained further below. The set of
+grepping options are required and used only when the action option directing the
+operation of 'path-set-test-percents' is not `-S|--source'. 
+
+  ==========================================================================
+  -G|--graph
+  --------------------------------------------------------------------------
+  * input: exactly as in the case of action option `-T|--table' paired with
+    the option `-i|--input=+'.
+  * output: a PNG file, when given `-o|--output=-' or when `-o|--output' is
+    not given at all, or a PNG file name, if provided with `-o|--output=+'.
+    In this latter case, the file name produced on output is generated from
+    the set of specified grepping options (see the entry `-N|--name=graph').
+
+    The PNG file is produced by 'path-set-test-graph' to which is provided
+    the text table obtained from invoking 'path-set-test-percents' with the
+    action option `-T|--table' and the option `-i|--input=+' along with all
+    grepping options given in the initiating command line.
+  ==========================================================================
+  -N|--name=$ACTION, where '$ACTION' is either 'table' or 'graph'
+  --------------------------------------------------------------------------
+  * input: none.
+  * output: a file name of form '$BASE.txt', when '$ACTION' is 'table', or,
+    '$BASE.png', when '$ACTION' is 'graph'. '$BASE' is generated from the
+    set of grepping options given in the invoking command line.
+  ==========================================================================
+  -S|--source=FILE
+  --------------------------------------------------------------------------
+  * input: a test result (SHA1-named) text file.
+  * output: a text table made of two columns of numerical data obtained out
+    of file '$FILE'. The first column contains in a series the number of path
+    names fed in to 'path-set' in the sequence of tests recorded by '$FILE'.
+    The second column contains in a series (running parallel to the previous
+    one) the *average* values of the stat parameter named by `-p|--stat-NAME' 
+    -- which is grepped from the same sequence of tests recorded by '$FILE'.
+  ==========================================================================
+  -T|--table
+  --------------------------------------------------------------------------
+  * input: taken from a set of test result SHA1-named files of which names
+    are given in the input file '$FILE', if the argument of `-i|--input' is
+    '$FILE' ('-' is 'stdin'). Otherwise, if the argument of `-i|--input' is
+    '+', then the SHA1-named input files are computed by a grepping command
+    like:
+
+  $ path-set-test-grep -T --$SET_TYPE GREPPING_OPTION...
+
+    where '$SET_TYPE' is either the argument of option `-s|--set-type', or,
+    is 'path-trie', when the option isn't given in the invoking command line.
+
+  * output: a text table, when given `-o|--output=-' or when `-o|--output' is
+    not given at all, or a table file name, if provided with `-o|--output=+'.
+    In this latter case, the file name produced on output is generated from
+    the set of specified grepping options (see the entry `-N|--name=table').
+
+    The text table is made of several columns of numerical data obtained out
+    of the input SHA1-named test result files. This aggregated text table is
+    obtained by joining in the text tables resulted from invoking the shell
+    function with options `-S|--source=$FILE' and `-p|--stat-$NAME', for each
+    file '$FILE' in the mentioned set of SHA1-named files. The join is based
+    on the first column of each of the inner text tables, 'path-names'. The
+    'n+1'-th output column contains the percents of gain of the value on the
+    second column of the 'n'-th SHA1-named file. The data rows produced are
+    preceded by a header row containing on the first column 'path-names' and
+    on the 'n+1'-th column the first 8 characters of the name of the 'n'-th
+    SHA1-named file.
+
+    The percents of gain computed on each data cell of the output table are
+    taken with respect to the argument given to option `-r|--ref-series', if
+    any such option was specified in the invoking command line (if not, then
+    is considered given as 'set-type'). Before computing these percentages
+    for each cell, the output table contains raw values only, extracted from
+    SHA1-named files. The raw values are transformed to percentage values by
+    the procedure explained below. 
+
+    When given `-r|--ref-series=$SHA1NAME', the output table is adjoined with
+    the second column of the table produced upon invoking the shell function
+    with `-S|--source=$SHA1NAME' and `-p|--stat-$NAME'.
+
+    When given `-r|--ref-series=plain-set', the output table is adjoined with
+    the second column of the table produced upon invoking the shell function
+    with `-S|--source=$SHA1NAME' and `-p|--stat-$NAME', where '$SHA1NAME' is
+    the name produced by a command like:
+
+  $ path-set-test-grep -T \
+  --plain-set --gnulib-hash --rehash-size=1.4142 GREPPING_OPTION...
+
+    When given `-r|--ref-series=set-type', the output table is adjoined with
+    one column, precisely as in the case of `-r|--ref-series=plain-set', but
+    replacing 'plain-set' with '$SET_TYPE', the argument of `-s|--set-type'.
+    Thus the SHA1-named file used for adjoining the additional column to the
+    output table is obtained from a command like:
+
+  $ path-set-test-grep -T \
+  --$SET_TYPE --gnulib-hash --rehash-size=1.4142 GREPPING_OPTION...
+
+    In any case, upon the adjoining of this latter column -- let it be named
+    '$adjoined' --, the percentages mentioned above are computed as follows:
+
+      for (each data row $i) {
+          for (each column $j) {
+              // the cell <$i,$j> is set to the value of
+              // the percents of gain of the cell itself
+              // relative to the cell <$i,$adjoined>
+              cell <$i,$j> = percents(
+                  cell <$i,$adjoined>,
+                  cell <$i,$j>)
+          }
+      }
+
+    where the 'percents' function is simply:
+
+      percents(t, v)
+      { return t ? (t - v) / t * 100 : NAN }
+
+    The column '$adjoined' is then removed from the output table in the cases
+    of options `-r|--ref-series=$SHA1NAME' and of `-r|--ref-series=plain-set',
+    only if the invoking command line specified `-R|--exclude-ref-series'.
+  ==========================================================================
+
+Similarly to the shell functions above, inserting properly the option `-d' in a
+'path-set-test-percents' command line tells the shell function to print out the
+text of the 'bash' script generated and executed internally:
+
+  $ path-set-test-percents ... -d [-- GREPPING_OPTION...]|less
+
+
+7. Appendix: The GNU/Linux Programs Used
 ========================================
 
 The programs used by the shell functions in file 'src/commands.sh' are:
@@ -862,14 +1180,21 @@ The programs used by the shell functions in file 'src/commands.sh' are:
   * GNU gcc 4.3.4
   * GNU grep 2.7
   * GNU make 3.81
+  * GNU plotutils 2.6 (graph -- patched as shown in section 9)
   * GNU sed 4.1.5
   * git 1.6.0
+  * ImageMagick 6.4.3 (convert)
   * super-sed 3.62
 
 Note that 'diff' and 'git' are used only by the shell function 'git-repo-diff'.
 
+The patched 'graph' is used only by shell functions 'path-set-test-graph' and
+'path-set-test-percents'. The shell function 'path-set-test-percents' is using
+'graph' only indirectly -- only if invoked with action option `-G|--graph' --,
+via a call to 'path-set-test-graph'.
 
-6. Appendix: Links to Json-Type and Gnulib
+
+8. Appendix: Links to Json-Type and Gnulib
 ==========================================
 
 The table below lists the SHA1 hashes of the original files brought in 'lib'
@@ -919,8 +1244,103 @@ directory of Path-Set source tree. The command line options of shell function
     -u|--unified=NUM          pass '-u|--unified=NUM' to diff
 
 
-7. References
-=============
+9. Appendix: Patching the 'graph' Program
+=========================================
+
+Section 5, Using 'path-set-test-graph' Shell Function, mentioned that for the
+shell functions 'path-set-test-{graph,percents}' to be able to generate plots
+base on the statistics data recorded in SHA1-named text files, one must have
+readily available a specifically patched version of the 'graph' program of GNU
+'plotutils' package v2.6.
+
+This section presents the procedure of making up the respective patched 'graph'. 
+
+Since 'graph' has to be built from sources, first thing to do is to obtain the
+GNU 'plotutils' tarball v2.6 in a directory of one's choice:
+
+  $ wget ftp://ftp.gnu.org/gnu/plotutils/plotutils-2.6.tar.gz
+
+  $ sha1sum -b plotutils-2.6.tar.gz
+  7921301d9dfe8991e3df2829bd733df6b2a70838 *plotutils-2.6.tar.gz
+
+Note that one could also verify the signature of the received package by:
+
+  $ wget ftp://ftp.gnu.org/gnu/plotutils/plotutils-2.6.tar.gz.sig
+
+  $ gpg --verify plotutils-2.6.tar.gz.sig 
+
+A description of the procedure of verifying a signature can be read from GnuPG
+FAQ, https://www.gnupg.org/faq/gnupg-faq.html#how_do_i_verify_signed_packages.
+
+Next step is to apply the patches in 'tools/plotutils' on the obtained source
+tree, in the order shown:
+
+  $ tar -zxf plotutils-2.6.tar.gz
+
+  $ cd plotutils-2.6
+
+  $ export PATH_SET_HOME=...
+
+  $ patch -p0 -i $PATH_SET_HOME/tools/plotutils/graph-legend.patch
+
+  $ patch -p0 -i $PATH_SET_HOME/tools/plotutils/graph-force-top-label.patch
+
+  $ patch -p0 -i $PATH_SET_HOME/tools/plotutils/graph-bottom-label.patch
+
+The environment variable '$PATH_SET_HOME' is set to the path to the directory
+were the source tree of Path-Set is located.
+
+Once the GNU 'plotutils' source tree was patched, the accustomed procedure of
+building it can right away be employed:
+
+  $ ./configure ...
+
+  $ make
+
+  $ make check
+
+  $ make install
+
+  $ make distclean
+
+A special mention has to be made with regards of GNU 'plotutils' being build
+with PNG support enabled. This is so for 'graph' to be able to generate plots
+in the form of PNG files. Therefore, the system on which the above procedure
+takes place has to have installed the development package of 'libpng'. This
+package includes not only the 'libpng.so' shared library binary, but also the
+the header files matching precisely the respective binary library.
+
+One more thing related to building 'graph': if one's 'libpng' installation is
+of version 1.4.0 or higher, prior to start building GNU 'plotutils', he will
+have to manually patch the source tree once more as shown by Ludovic Courtès'
+note on https://lists.gnu.org/archive/html/bug-plotutils/2013-07/msg00000.html.
+
+Upon building the package successfully, one has to make sure that referencing
+the 'graph' program conducts to the freshly built one: the 'path-set-test-graph'
+command below must produce exactly the output shown:
+
+  $ path-set-test-graph -F
+  bottom-label
+  force-top-label
+  note-font-name
+  note-font-size
+  legend
+  place-legend
+  legend-font-size
+
+Finally, let mention the commands producing 'tools/plotutils/graph-legend.patch'
+from Daniel Llorens' public git repository:
+
+  $ git clone https://notabug.org/lloda/plotutils-graph-patches-lloda.git
+
+  $ git --git-dir plotutils-graph-patches-lloda/.git \
+    diff 798e423..4411194 --no-prefix -b|
+    filterdiff -i configure.ac -i '*.[hc]' \
+    > graph-legend.patch
+
+
+10. References
+==============
 
 Free Software:
 
