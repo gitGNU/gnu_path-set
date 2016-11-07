@@ -41,6 +41,17 @@ separate directories, in 'lib/json-type' and, respectively, 'lib/gnulib'.
 Each Json-Type and Gnulib source file in the 'lib' directory contains unaltered
 the original copyright and license notices.
 
+Path-Set includes also a couple of patch files of 'graph' program. This program
+is part of GNU's 'plotutils' package version 2.6, which itself is licensed with
+GPL v3. The file 'tools/plotutils/graph-legend.patch' is due to Daniel Llorens'
+work: https://notabug.org/lloda/plotutils-graph-patches-lloda. The other two
+patch files -- 'tools/plotutils/graph-{force-top,bottom}-label.patch' -- were
+produced by the author of this package and are subject to the same copyright
+and license provisions as the rest of Path-Set is.
+
+Note that the set of patch files named above leave unaltered the copyright and
+license notices of the source files in GNU 'plotutils' package.
+
 The test results data -- the files 'tests/*/$SHA1NAMES' -- is subject to the
 same copyright and license provisions than the rest of Path-Set is.
 
