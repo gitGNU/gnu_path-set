@@ -123,18 +123,20 @@ options of 'path-set-test-gen-percents' work as follows:
   produced by `--table' or `--graph' paired with `-o+'.
 
   `-o-'
-  Generate output on 'stdout' instead of producing files having and printing
-  out their names. When given `--graph' option, the PNG content is piped in
-  to 'display' program.
+  When given `--table' option, generate output on 'stdout' instead of regular
+  files. When given `--graph' option, the PNG images produced are piped in to
+  'display' program (of 'ImageMagick' package).
 
   `-o+'
   Produce content in files according to which of the two options -- `--table'
-  or `--graph' -- was specified and print out their names.
+  or `--graph' -- was given in the command line and print the names of these
+  files on 'stdout'.
 
   `--table' or `--graph'
   Produce content according to the specified option. Out of running a series
-  of 'path-set-test-percents', the shell function produces either text tables,
-  when given `--table', or PNG files, when provided with `--graph'.
+  of 'path-set-test-percents' commands, 'path-set-test-gen-percents' produces
+  either text tables, when given `--table', or PNG images, when provided with
+  `--graph'.
 
   `--stat-total-mem' or `--stat-real-insert-time'
   Account the derived statistics data produced by the shell function for the
