@@ -24,7 +24,7 @@ along with Path-Set.  If not, see <http://www.gnu.org/licenses/>.
                                   Nov  8, 2016
 
 
-This document presents the procedure that produced the set of plot of files
+This document presents the procedure that produced the set of plots in files
 'tests/2016-10-20/*.png'. These plots were produced with the help of a patched
 'graph' program (which is part of GNU 'plotutils' package -- the section 9 of
 the README file describes in detail how to obtain 'graph'), using the new shell
