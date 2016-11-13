@@ -255,7 +255,7 @@ static size_t lhash_next_prime(size_t n)
 
 #endif // LHASH_PRIME_FUNCS
 
-// stev: Knuth, TAOCP, vol 3, 3rd edition,
+// stev: Knuth, TAOCP, vol 3, 2nd edition,
 // 6.4 Hashing, p. 528
 #define LHASH_REHASH_LOAD 0.75f
 
@@ -382,7 +382,7 @@ static void LHASH_DONE(
         ASSERT(h->used < h->size); \
     } while (0)
 
-// stev: Knuth, TAOCP, vol 3, 3rd edition,
+// stev: Knuth, TAOCP, vol 3, 2nd edition,
 // 6.4 Hashing, Algorithm L, p. 526
 
 #ifdef LHASH_NEED_LOOKUP
